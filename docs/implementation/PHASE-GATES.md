@@ -22,3 +22,20 @@ Salida requerida:
 - `STATUS.md` en `WAITING_USER_APPROVAL`.
 
 Decisión humana: `APPROVED`, `CHANGES_REQUESTED` o `REJECTED`. El silencio no aprueba.
+
+## GATE-02
+
+Entrada: `GATE-01: APPROVED` y Fase 02 como única fase activa.
+
+Salida requerida:
+
+- StateGraph con rutas `navigate` e `inspection`.
+- Checkpoints SQLite con `thread_id` y `runId` estable.
+- Reapertura de un runtime nuevo y lectura del checkpoint anterior.
+- `interrupt()` de inspección con decisiones `approved` y `rejected`.
+- No duplicar el evento `workflow.started` al reanudar.
+- Audit log verificable por cada transición.
+- Tests unitarios/regresión y smoke JSON reproducible.
+- `STATUS.md` en `WAITING_USER_APPROVAL`.
+
+Decisión humana: `APPROVED`, `CHANGES_REQUESTED` o `REJECTED`. El silencio no aprueba.

@@ -3,107 +3,107 @@
 ## Estado actual
 
 ```yaml
-phase: '01'
+phase: '02'
 state: WAITING_USER_APPROVAL
-baselineCommit: 0a4a2bf
+baselineCommit: 1aea0a9
 branch: main
-gate: GATE-01
+gate: GATE-02
 userDecision: null
-nextPhase: '02'
+nextPhase: '03'
 ```
 
-La instrucción del usuario «sigue con el plan» se toma como aprobación explícita de GATE-00. Fase 01 fue la única fase activa. Fase 02 no está iniciada.
+La instrucción del usuario «sigue creando» se toma como aprobación explícita de GATE-01. Fase 02 fue la única fase activa. Fase 03 no está iniciada.
 
-## Fase 01 — tareas
+## Fase 02 — tareas
 
 | ID | Estado | Superficie | Output verificable |
 |---|---|---|---|
-| F01-T01 | done | runtime Electron | `apps/desktop/src/main.ts`, `apps/desktop/preload.cjs`, menú nativo, aislamiento de contexto |
-| F01-T02 | done | shell React | `apps/desktop/src/renderer/main.tsx`, `styles.css`, tabs, navegación, tema y chat demo |
-| F01-T03 | done | smoke visual | `tests/e2e/desktop-smoke.ts`, capturas PNG reales de Electron |
-| F01-T04 | done | documentación/gate | `phase-01-evidence.md`, `PHASE-GATES.md`, este STATUS |
+| F02-T01 | done | StateGraph | `packages/orchestrator/src/studio-graph.ts`: rutas `navigate` e `inspection` |
+| F02-T02 | done | persistencia | `StudioGraphRuntime` con SQLite, `threadId`, `runId` y reapertura |
+| F02-T03 | done | gates mock | `interrupt()` + `resume(approved/rejected)` y audit log |
+| F02-T04 | done | smoke/tests | `tests/studio-graph.test.ts`, `scripts/run-studio-graph-spike.ts` |
+| F02-T05 | done | documentación | `phase-02-evidence.md`, `PHASE-02-PLAN.md`, `PHASE-GATES.md` y este STATUS |
 
 ## Verificación automatizada
 
 | Comando | Resultado | Evidencia |
 |---|---|---|
-| `pnpm build:desktop` | pass | Vite + TypeScript compilan renderer y Electron Main |
-| `pnpm typecheck:desktop` | pass | tipos del proceso Electron |
-| `pnpm typecheck` | pass | contratos/scripts/tests del repo |
+| `pnpm typecheck` | pass | TypeScript del repo y workflow |
+| `pnpm test:f02` | pass | navegación, persistencia, approval/rejection y audit log |
+| `pnpm spike:studio-graph` | pass | SQLite real; interrupt → reopen → approved |
+| `pnpm build:all` | pass | TypeScript repo + Vite/Electron desktop |
+| `pnpm test:e2e` | pass | Electron real; Fase 02 no cambia UI |
 | `pnpm lint` | pass | `eslint .` |
-| `pnpm test` | pass | 3 archivos, 6 tests Fase 00 |
-| `pnpm test:e2e` | pass | Electron real; título, navegación, tema, paneles resize y chat demo |
-| `pnpm test:f01` | pass | build desktop + smoke Playwright |
+| `pnpm test` | pass | 4 archivos, 9 tests |
 
-Salida observada del smoke:
+## Smoke observado
 
 ```json
 {
-  "title": "ProjectStudio",
-  "activeSection": "Arquitectura",
-  "theme": "app-shell light",
-  "screenshots": [
-    "docs/implementation/evidence/F01-T03-desktop-dark.png",
-    "docs/implementation/evidence/F01-T03-desktop-light.png"
-  ]
+  "pending": {
+    "interrupted": true,
+    "runId": "run-f02-smoke",
+    "jobStatus": "waiting-approval",
+    "gateStatus": "pending"
+  },
+  "approved": {
+    "runId": "run-f02-smoke",
+    "jobStatus": "completed",
+    "result": "inspected:repository:repo-demo",
+    "auditKinds": [
+      "workflow.started",
+      "gate.approved",
+      "inspection.completed"
+    ]
+  }
 }
 ```
 
-## Evidencia visual
-
-- `docs/implementation/evidence/F01-T03-desktop-dark.png`
-  - SHA-256: `2dfcbb53aa761b1e8bafa78b77c6969db0d85c568c56e5490ae88e537eb1dddb`
-- `docs/implementation/evidence/F01-T03-desktop-light.png`
-  - SHA-256: `f7dc1b1963ecd02a7413fc3e6add7c8627df1d6fa72029af0d239f662d84438b`
-
-Las capturas fueron generadas por Electron real y Playwright; no son mockups.
-
 ## Alcance implementado
 
-- Ventana Electron de 1440×920 con mínimos de 1120×720.
-- Renderer React sin Node APIs; preload CommonJS aislado con `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
-- Menú nativo `ProjectStudio` y `Ver`.
-- Explorador lateral con proyecto demo, navegación de Resumen, ProductShape, Arquitectura, Evidencia y Cambios.
-- Tabs de Resumen, ProductShape y Arquitectura.
-- Paneles laterales con `resize: horizontal`.
-- Tema oscuro/claro.
-- Chat local demo con contexto de vista, envío de mensaje y respuesta claramente marcada como demo.
-- Proyecto `notes` sólo aparece como etiqueta de demo; no se lee ni modifica.
+- `navigate`: abre una vista determinista y completa con resultado auditable.
+- `inspection`: se detiene en `waiting-approval` mediante `interrupt()`.
+- Reanudación con `Command({ resume })` mediante la interfaz `resume()`.
+- Decisiones `approved` y `rejected` persistidas.
+- Checkpoints SQLite reabiertos desde un runtime nuevo.
+- `runId` estable durante todo el workflow.
+- `auditLog` durable y sin repetir `workflow.started` al reanudar.
 
 ## Limitaciones reales
 
-1. El chat no invoca OMP real. La conexión RPC real sigue bloqueada por ausencia de modelo configurado, según Fase 00.
-2. El estado de UI no persiste entre reinicios. Eso pertenece a Fase 02.
-3. El selector `notes · brownfield pendiente` no ejecuta brownfield. Su análisis queda para una fase posterior autorizada.
-4. No hay LangGraph persistente, Event Store, Permission Broker ni host tools en esta fase.
-5. La captura valida la superficie visual; no constituye evidencia de OMP real ni de datos semánticos canónicos.
+1. Los workflows son mocks deterministas; no conectan todavía UI, OMP, cloud ni Permission Broker.
+2. No se ejecutan side effects externos; la idempotencia de efectos reales queda pendiente.
+3. La UI Fase 01 no cambia en esta fase; no se generaron nuevas capturas.
+4. El chat sigue siendo demo local. La conexión OMP real continúa bloqueada por ausencia de modelo configurado.
+5. El proyecto `notes` no se analiza ni modifica.
 
-## Candidato brownfield posterior
+## Evidencia visual vigente
 
-El proyecto externo `notes` fue localizado y sólo se inspeccionó su listado: `AGENTS.md`, código Python, tests y documentación. No se abrió, indexó, modificó ni conectó a OMP. Se podrá usar con scope/worktree explícitos cuando corresponda a la fase brownfield.
+Fase 02 no cambia la superficie visual. Se mantienen las capturas reales de Fase 01:
 
-## Checklist manual GATE-01 — pendiente del usuario
+- `docs/implementation/evidence/F01-T03-desktop-dark.png`
+- `docs/implementation/evidence/F01-T03-desktop-light.png`
 
-- [ ] Ejecutar `pnpm desktop` y confirmar que abre la ventana Electron.
-- [ ] Cambiar entre Resumen, ProductShape, Arquitectura, Evidencia y Cambios.
-- [ ] Cambiar tema oscuro/claro y revisar contraste.
-- [ ] Arrastrar el borde del explorador izquierdo y del chat derecho; confirmar que ambos redimensionan.
-- [ ] Cambiar el proyecto demo en el selector.
-- [ ] Abrir tabs de ProductShape y Arquitectura; regresar a Resumen.
-- [ ] Escribir en el chat y pulsar Enviar; confirmar respuesta etiquetada como demo local.
-- [ ] Abrir menú `ProjectStudio` y menú `Ver`; confirmar Reload, DevTools y fullscreen.
-- [ ] Revisar ambos PNG en `docs/implementation/evidence/` y sus hashes.
-- [ ] Confirmar que el texto `OMP preparado · RPC aislado · Fase 03` no se interpreta como OMP conectado.
-- [ ] Confirmar que no se inició Fase 02 ni el análisis brownfield de `notes`.
-- [ ] Decidir `APPROVED`, `CHANGES_REQUESTED` o `REJECTED` para GATE-01.
+## Checklist manual GATE-02 — pendiente del usuario
 
-## Historial Fase 00
+- [ ] Ejecutar `pnpm test:f02` y revisar los 3 tests específicos de `StudioGraphRuntime`.
+- [ ] Ejecutar `pnpm spike:studio-graph` y comprobar `pending.interrupted=true`.
+- [ ] Comprobar que `pending.runId` y `approved.runId` son iguales.
+- [ ] Comprobar `pending.jobStatus=waiting-approval` y `pending.gateStatus=pending`.
+- [ ] Comprobar resultado aprobado `inspected:repository:repo-demo`.
+- [ ] Revisar `auditKinds` y confirmar ausencia de un segundo `workflow.started`.
+- [ ] Revisar `packages/orchestrator/src/studio-graph.ts` y `docs/implementation/phase-02-evidence.md`.
+- [ ] Ejecutar la regresión `pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e`.
+- [ ] Confirmar que no se inició Fase 03 ni se conectó OMP real.
+- [ ] Decidir `APPROVED`, `CHANGES_REQUESTED` o `REJECTED` para GATE-02.
 
-- Base inicial: commit `c7cc3e5`, branch `main`, sólo `README.md` versionado.
-- Entregables Fase 00: `AGENTS.md`, `.omp/RULES.md`, skills, contratos Zod, decoder/emulador OMP RPC, spike LangGraph SQLite, ADR-014…ADR-021 y dossier.
-- Commit Fase 00: `0a4a2bf chore: bootstrap phase 00 contracts and spikes`.
-- F00-T06 continúa bloqueado: el binario local `omp/18.12.6` no emite `ready` sin modelo seleccionado.
+## Historial
+
+- Base inicial: `c7cc3e5`.
+- Fase 00: `0a4a2bf chore: bootstrap phase 00 contracts and spikes`.
+- Fase 01: `1aea0a9 feat: add phase 01 electron react shell`.
+- README: `4c253a0 docs: add desktop run instructions`.
 
 ## User gate
 
-`WAITING_USER_APPROVAL`. No push será realizado. No se inicia Fase 02 hasta una decisión explícita del usuario.
+`WAITING_USER_APPROVAL`. No push será realizado. No se inicia Fase 03 hasta una decisión explícita del usuario.

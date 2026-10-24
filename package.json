@@ -1,8 +1,8 @@
 {
   "name": "projectstudio",
   "private": true,
-  "version": "0.0.0-fase01",
-  "description": "ProjectStudio Fase 01: shell Electron/React",
+  "version": "0.0.0-fase02",
+  "description": "ProjectStudio Fase 02: LangGraph persistente",
   "packageManager": "pnpm@10.16.1",
   "type": "module",
   "scripts": {
@@ -15,11 +15,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "tsx tests/e2e/desktop-smoke.ts",
-    "test:f01": "pnpm build:desktop && pnpm test:e2e",
+    "test:f02": "vitest run tests/studio-graph.test.ts",
     "desktop": "pnpm build:desktop && electron apps/desktop/dist/main.js",
     "spike:omp": "tsx scripts/run-omp-rpc-spike.ts",
     "spike:omp:real": "tsx scripts/run-omp-rpc-spike.ts --real",
-    "spike:langgraph": "tsx scripts/run-langgraph-sqlite-spike.ts"
+    "spike:langgraph": "tsx scripts/run-langgraph-sqlite-spike.ts",
+    "spike:studio-graph": "tsx scripts/run-studio-graph-spike.ts"
   },
   "dependencies": {
     "@langchain/langgraph": "1.5.2",

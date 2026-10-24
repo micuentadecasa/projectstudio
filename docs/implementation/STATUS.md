@@ -24,6 +24,8 @@ El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementad
 | F04-T04 | done | integración | renderer → IPC → OmpAdapter → RPC → renderer |
 | F04-T05 | done | evidencia | `F04-T01-desktop-chat-*.png`, `F04-T03-desktop-chat-real.png` |
 | F04-T06 | done | selección de repo | `PROJECTSTUDIO_PROJECT_ROOT` controla el cwd real de OMP |
+| F04-T07 | done | diagrama en chat | bloque Mermaid de OMP se renderiza como mapa visual sin inventar nodos |
+
 ## Flujo funcionando
 
 ```text
@@ -45,7 +47,7 @@ El producto requiere que el usuario tenga OMP instalado, autenticado y con model
 |---|---|---|
 | `pnpm build:all` | pass | renderer y main Electron compilados |
 | `pnpm lint` | pass | ESLint sin errores |
-| `pnpm test` | pass | 6 archivos, 12 tests; integración OMP real incluida |
+| `pnpm test` | pass | 7 archivos, 14 tests; integración OMP real y parser Mermaid |
 | `pnpm test:e2e` | pass | Electron real: mensaje enviado y respuesta `OMP_REAL_OK` |
 | `pnpm test:f03` | pass | 3 tests contra el proceso OMP real |
 | `pnpm spike:omp-adapter` | pass | OMP real: ready, streaming, settled |

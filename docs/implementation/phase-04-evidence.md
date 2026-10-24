@@ -25,6 +25,8 @@ React renderer
 | F04-T04 | done | `tests/e2e/desktop-smoke.ts` | mensaje real enviado, respuesta OMP real y estado `settled` |
 | F04-T05 | done | capturas PNG | dark/light y respuesta real visible |
 | F04-T06 | done | `apps/desktop/src/main.ts`, README | `PROJECTSTUDIO_PROJECT_ROOT` fija cwd y nombre del repositorio |
+| F04-T07 | done | `apps/desktop/src/renderer/diagrams.ts` | Mermaid emitido por OMP se muestra en el chat como diagrama |
+
 
 ## Comando reproducible
 

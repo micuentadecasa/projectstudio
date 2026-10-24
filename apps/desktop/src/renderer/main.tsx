@@ -1,8 +1,8 @@
 import React, { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import { extractMermaid, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
-
 type Section = "Resumen" | "ProductShape" | "Arquitectura" | "Evidencia" | "Cambios";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 
@@ -19,7 +19,31 @@ const initialMessages: Message[] = [
   { author: "omp", text: "Pide una revisión del repositorio para obtener hallazgos y un diagrama basado en su código real." },
 ];
 
-
+function AssistantContent({ text }: { text: string }): JSX.Element {
+  const source = extractMermaid(text);
+  if (!source) return <>{text}</>;
+  const diagram = parseMermaid(source);
+  const match = /```mermaid\\s*\\n([\\s\\S]*?)```/i.exec(text);
+  const before = match ? text.slice(0, match.index) : text;
+  const after = match ? text.slice((match.index ?? 0) + match[0].length) : "";
+  return (
+    <>
+      {before}
+      <div className="chat-diagram" aria-label="Diagrama Mermaid generado por OMP">
+        <div className="diagram-flow">
+          {diagram.nodes.map((node, index) => (
+            <React.Fragment key={node.id}>
+              <div className="diagram-node"><strong>{node.label}</strong><small>{node.id}</small></div>
+              {index < diagram.nodes.length - 1 && <span className="diagram-arrow">→</span>}
+            </React.Fragment>
+          ))}
+        </div>
+        <small className="diagram-caption">Generado por OMP · basado en el bloque Mermaid recibido</small>
+      </div>
+      {after}
+    </>
+  );
+}
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -218,7 +242,7 @@ function App(): JSX.Element {
           <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">REAL</span></div><div className="chat-context">contexto: {section.toLowerCase()} · {chatStatus}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
           <div className="chat-messages" aria-live="polite">
             <div className="chat-date">HOY · SESIÓN RPC</div>
-            {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className={`message-bubble ${message.streaming ? "streaming" : ""}`}><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.text || (message.streaming ? "…" : "")}</div></div>)}
+            {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className={`message-bubble ${message.streaming ? "streaming" : ""}`}><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.author === "omp" ? <AssistantContent text={message.text || (message.streaming ? "…" : "")} /> : message.text}</div></div>)}
           </div>
           {chatError && <div className="chat-error" role="alert">{chatError}</div>}
           <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">{sending ? "OMP está respondiendo…" : "↵ enviar · ⇧↵ nueva línea"}</span><button className="send-button" onClick={() => void sendMessage()} aria-label="Enviar mensaje">↑</button></div></div>

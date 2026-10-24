@@ -54,9 +54,10 @@ El proceso OMP recibe esa ruta como `cwd`; las sesiones se guardan en `.tmp/omp-
 3. Cambia entre tema oscuro y claro.
 4. Arrastra el borde del explorador izquierdo y del chat derecho.
 5. Escribe `Revisa el proyecto seleccionado y genera un diagrama Mermaid basado sólo en el código real.` en el chat y pulsa `Enviar`.
-6. Comprueba que aparecen deltas parciales y una respuesta final del modelo configurado.
-7. Comprueba que el estado del chat termina en `settled`.
-8. Abre el menú `Ver` para probar Reload, DevTools y fullscreen.
+6. Si OMP devuelve un bloque ` ```mermaid `, ProjectStudio lo pinta como mapa visual dentro del chat y conserva el texto recibido.
+7. Comprueba que aparecen deltas parciales y una respuesta final del modelo configurado.
+8. Comprueba que el estado del chat termina en `settled`.
+9. Abre el menú `Ver` para probar Reload, DevTools y fullscreen.
 
 ## Ejecutar verificaciones
 

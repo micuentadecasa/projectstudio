@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "build:desktop": "vite build --config apps/desktop/vite.config.ts && tsc -p apps/desktop/tsconfig.main.json",
     "build:all": "pnpm build && pnpm build:desktop",
+    "desktop": "pnpm build:all && electron apps/desktop/dist/main.js",
     "desktop:notes": "PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm desktop",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:desktop": "tsc -p apps/desktop/tsconfig.main.json --noEmit",

@@ -39,3 +39,21 @@ Salida requerida:
 - `STATUS.md` en `WAITING_USER_APPROVAL`.
 
 Decisión humana: `APPROVED`, `CHANGES_REQUESTED` o `REJECTED`. El silencio no aprueba.
+
+## GATE-03
+
+Entrada: `GATE-02: APPROVED` y Fase 03 como única fase activa.
+
+Salida requerida:
+
+- `OmpAdapter` aislado sobre `omp --mode rpc`.
+- Negociación v2 y decoder `rpc_chunk` verificado.
+- Streaming de mensajes, `prompt_result` y `session_settled` separados.
+- Host tool mínima con `host_tool_call`/`host_tool_result`.
+- `steer`, `follow_up`, `abort` y estados del adaptador.
+- Sesión lógica con `sessionKey`, cwd/profile/session-dir explícitos.
+- Emulador determinista y probe del binario real documentado.
+- Si el binario real carece de modelo, el bloqueo queda explícito; no se acepta el emulador como sustituto.
+- `STATUS.md` en `WAITING_USER_APPROVAL`.
+
+Decisión humana: `APPROVED`, `CHANGES_REQUESTED` o `REJECTED`. El silencio no aprueba.

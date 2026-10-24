@@ -1,14 +1,15 @@
 {
   "name": "projectstudio",
   "private": true,
-  "version": "0.0.0-fase02",
-  "description": "ProjectStudio Fase 02: LangGraph persistente",
+  "version": "0.0.0-fase03",
+  "description": "ProjectStudio Fase 03: adaptador OMP RPC",
   "packageManager": "pnpm@10.16.1",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:desktop": "vite build --config apps/desktop/vite.config.ts && tsc -p apps/desktop/tsconfig.main.json",
     "build:all": "pnpm build && pnpm build:desktop",
+    "desktop": "pnpm build:desktop && electron apps/desktop/dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:desktop": "tsc -p apps/desktop/tsconfig.main.json --noEmit",
     "lint": "eslint .",
@@ -16,11 +17,12 @@
     "test:watch": "vitest",
     "test:e2e": "tsx tests/e2e/desktop-smoke.ts",
     "test:f02": "vitest run tests/studio-graph.test.ts",
-    "desktop": "pnpm build:desktop && electron apps/desktop/dist/main.js",
+    "test:f03": "vitest run tests/omp-adapter.test.ts",
     "spike:omp": "tsx scripts/run-omp-rpc-spike.ts",
     "spike:omp:real": "tsx scripts/run-omp-rpc-spike.ts --real",
     "spike:langgraph": "tsx scripts/run-langgraph-sqlite-spike.ts",
-    "spike:studio-graph": "tsx scripts/run-studio-graph-spike.ts"
+    "spike:studio-graph": "tsx scripts/run-studio-graph-spike.ts",
+    "spike:omp-adapter": "tsx scripts/run-omp-adapter-spike.ts"
   },
   "dependencies": {
     "@langchain/langgraph": "1.5.2",

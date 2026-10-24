@@ -89,8 +89,9 @@ export class RpcClient extends EventEmitter {
 
   async request(command: RpcCommand, timeoutMs = 3_000): Promise<RpcFrame> {
     const id = command.id ?? `rpc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const response = this.waitFor((frame) => frame.type === "response" && frame.id === id, timeoutMs);
     this.send({ ...command, id });
-    return this.waitFor((frame) => frame.type === "response" && frame.id === id, timeoutMs);
+    return response;
   }
 
   waitFor(predicate: (frame: RpcFrame) => boolean, timeoutMs = 3_000): Promise<RpcFrame> {

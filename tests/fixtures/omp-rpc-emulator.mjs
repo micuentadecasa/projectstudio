@@ -23,6 +23,19 @@ rl.on("line", (line) => {
     send({ id: command.id, type: "response", command: command.type, success: true, data: { status: "ready", protocolVersion } });
     return;
   }
+  if (command.type === "get_available_models") {
+    send({ id: command.id, type: "response", command: command.type, success: true, data: { models: [] } });
+    return;
+  }
+  if (command.type === "get_available_commands") {
+    send({ id: command.id, type: "response", command: command.type, success: true, data: { commands: [] } });
+    return;
+  }
+  if (command.type === "steer" || command.type === "follow_up") {
+    send({ id: command.id, type: "response", command: command.type, success: true, data: { queued: command.type } });
+    send({ type: "queue_update", queue: command.type, messages: [command.message] });
+    return;
+  }
   if (command.type === "prompt") {
     send({ id: command.id, type: "response", command: command.type, success: true, data: { agentInvoked: true } });
     const callId = `tool-${++hostToolCallId}`;

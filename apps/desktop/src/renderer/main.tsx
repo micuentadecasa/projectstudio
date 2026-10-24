@@ -15,7 +15,7 @@ function extractAssistantFindings(text: string): AssistantFinding[] {
   const normalized = withoutDiagram.replace(/\s+(?=#{1,3}\s+)/g, "\n");
   const lines = normalized.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const findings: AssistantFinding[] = [];
-  for (let index = 0; index < lines.length && findings.length < 4; index += 1) {
+  for (let index = 0; index < lines.length && findings.length < 8; index += 1) {
     const heading = /^(?:#{1,3}\s+|\*\*)(.+?)(?:\*\*)?$/.exec(lines[index]);
     const bullet = /^[-*]\s+(.+)$/.exec(lines[index]);
     if (!heading && !bullet) continue;
@@ -64,6 +64,16 @@ function reviewPrompt(section: Section): string {
   if (section === "ProductShape") return "PRODUCTSHAPE: analiza el producto usando primero docs/product y después el código para corroborar. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
   if (section === "Arquitectura") return "ARCHITECTURE: inspecciona src/ y tests/ reales del proyecto. Describe componentes, entradas, salidas, persistencia y relaciones confirmadas. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
   return "Revisa el proyecto seleccionado y genera hallazgos verificables y un diagrama Mermaid basado sólo en el código real.";
+}
+function pdacEntityPrompt(page: Exclude<PdacPage, "overview">): string {
+  const focus = page === "use-cases"
+    ? "casos de uso y sus actores, precondiciones y resultados"
+    : page === "actors"
+      ? "actores humanos, sistemas externos y sus responsabilidades"
+      : page === "rules"
+        ? "reglas de negocio, invariantes y restricciones"
+        : "bounded contexts, límites y relaciones entre contextos";
+  return `PRODUCTSHAPE: profundiza sólo en ${focus}. Usa primero docs/product y contrasta con el código. Devuelve hallazgos con rutas verificables y actualiza el diagrama Mermaid sólo con relaciones confirmadas. No inventes datos.`;
 }
 
 function DiagramVisual({ source, canvas = false }: { source: string; canvas?: boolean }): JSX.Element {
@@ -499,7 +509,7 @@ function App(): JSX.Element {
                     {pdacSignals.map((signal) => <button className={`pdac-signal ${signal.state} ${pdacFocus === signal.id ? "selected" : ""}`} key={signal.id} onClick={() => openPdacPage(signal.id)} aria-pressed={pdacPage === signal.id}><span className="pdac-signal-dot" /><strong>{signal.label}</strong><small>{signal.state === "found" ? "ver página" : "pendiente"}</small></button>)}
                   </div>
                 </article>
-                {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">ENTIDAD PDAC</div><h2>{pdacPageLabels[pdacPage]}</h2><p>Esta página reúne sólo la evidencia disponible para esta entidad. El asistente seguirá completándola sin inventar datos.</p></div><button className="outline-button" onClick={() => openPdacPage("overview")}>← Volver al estado</button></article>}
+                {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">ENTIDAD PDAC</div><h2>{pdacPageLabels[pdacPage]}</h2><p>Esta página reúne sólo la evidencia disponible para esta entidad. El asistente seguirá completándola sin inventar datos.</p><div className="pdac-entity-count">{visibleFindings.length} hallazgo{visibleFindings.length === 1 ? "" : "s"} visible{sending ? " · actualizando" : ""}</div></div><div className="pdac-entity-actions"><button className="outline-button primary-review" onClick={() => void sendMessage(pdacEntityPrompt(pdacPage))}>{sending ? "Analizando…" : "Profundizar con OMP"}</button><button className="outline-button" onClick={() => openPdacPage("overview")}>← Volver al estado</button></div></article>}
                 <article className="panel-card pdac-diagram-card">
                   <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"}</div><h2>{latestDiagram ? "Relaciones encontradas" : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
                   {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones del mapa PDAC">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}

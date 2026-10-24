@@ -128,6 +128,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T18 | done | Mermaid se publica desde el streaming antes de cerrar el fence; el fallback comunica cuándo aún no hay diagrama |
 | F05-T19 | done | panel ProductShape reordenado como timeline vivo; diagrama ocupa el ancho principal y anuncia casos de uso nuevos durante streaming |
 | F05-T20 | done | botones del estado PDAC abren páginas de Casos de uso, Actores, Reglas y Bounded contexts y conservan el mapa |
+| F05-T21 | done | páginas de entidad muestran conteo de hallazgos, filtro contextual y acción `Profundizar con OMP`; el estado Notes pasa a 5/5 áreas con evidencia |
 ### Verificación F05
 
 ```bash

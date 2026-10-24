@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { extractMermaid, parseMermaid } from "../apps/desktop/src/renderer/diagrams.js";
 
@@ -12,5 +14,11 @@ describe("diagramas Mermaid del chat", () => {
       nodes: [{ id: "A", label: "API" }, { id: "B", label: "DB" }],
       edges: [{ from: "A", to: "B" }],
     });
+  });
+  it("parsea el Mermaid guardado desde una revisión real de Notes sin llamar a OMP", async () => {
+    const source = await readFile(resolve(process.cwd(), "docs/implementation/evidence/F05-T01-notes-productshape-real.mermaid"), "utf8");
+    expect(source).toContain("flowchart LR");
+    expect(source).toContain("BC-PRACTICE-MATERIAL");
+    expect(parseMermaid(source).nodes.length).toBeGreaterThan(5);
   });
 });

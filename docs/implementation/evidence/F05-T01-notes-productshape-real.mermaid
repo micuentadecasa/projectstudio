@@ -1,0 +1,34 @@
+flowchart LR
+    learner["Actor: Learner"]
+    operator["Actor: Local operator"]
+    muscriptor["Actor: MuScriptor transcription engine"]
+    omr["Actor: Optional score-image OMR"]
+
+    ingest["Capacidad: importar y transcribir por instrumento"]
+    worker["Capacidad: ejecutar worker local y exponer estado"]
+    library["Capacidad: explorar biblioteca y revisiones"]
+    practice["Capacidad: renderizar notación y practicar con playback sincronizado"]
+    coaching["Capacidad opt-in: analizar y guiar práctica con confirmación"]
+
+    transcription["BC-TRANSCRIPTION<br/>Instrument-Specific Ingestion"]
+    material["BC-PRACTICE-MATERIAL<br/>Practice Material"]
+    playback["BC-PRACTICE-PLAYBACK<br/>Interactive Notation Player"]
+    teacher["BC-PRACTICE-COACHING<br/>Contextual Practice Coaching"]
+
+    learner --> ingest
+    learner --> library
+    learner --> practice
+    learner --> coaching
+    operator --> worker
+    muscriptor --> ingest
+    omr -. opcional .-> ingest
+
+    ingest --> transcription
+    worker --> transcription
+    transcription --> material
+    library --> material
+    material --> playback
+    practice --> playback
+    material --> teacher
+    coaching --> teacher
+    teacher -. acciones confirmadas .-> playback

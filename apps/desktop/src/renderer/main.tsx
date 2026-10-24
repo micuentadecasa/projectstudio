@@ -19,6 +19,12 @@ const initialMessages: Message[] = [
   { author: "omp", text: "Pide una revisión del repositorio para obtener hallazgos y un diagrama basado en su código real." },
 ];
 
+function reviewPrompt(section: Section): string {
+  if (section === "ProductShape") return "PRODUCTSHAPE: analiza el producto usando docs/product y el código real. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un bloque Mermaid.";
+  if (section === "Arquitectura") return "ARCHITECTURE: inspecciona el código y tests reales del proyecto. Describe componentes, entradas, salidas, persistencia y relaciones confirmadas. Devuelve hallazgos con rutas verificables y un bloque Mermaid.";
+  return "Revisa el proyecto seleccionado y genera hallazgos verificables y un diagrama Mermaid basado sólo en el código real.";
+}
+
 function AssistantContent({ text }: { text: string }): JSX.Element {
   const source = extractMermaid(text);
   if (!source) return <>{text}</>;
@@ -222,7 +228,7 @@ function App(): JSX.Element {
                   <div className="map-node service-node"><span>⌘</span><strong>Diagrama pendiente</strong><small>pide una revisión en el chat</small></div>
                   <div className="map-badge">sin inventar componentes</div>
                 </div>
-                <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); setChatInput("Revisa el proyecto seleccionado y devuelve hallazgos verificables y un diagrama Mermaid de su arquitectura."); }}>Pedir diagrama real <span>→</span></button>
+                <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); setChatInput(reviewPrompt("Arquitectura")); }}>Pedir diagrama real <span>→</span></button>
               </article>
               <article className="panel-card activity-card">
                 <div className="card-heading"><div><div className="card-kicker">ACTIVIDAD</div><h2>Últimos hallazgos</h2></div><span className="live-badge"><span /> LIVE</span></div>
@@ -234,7 +240,7 @@ function App(): JSX.Element {
                 <button className="card-link" onClick={() => setSection("Evidencia")}>Ver timeline <span>→</span></button>
               </article>
             </section>
-            <section className="welcome-strip"><div className="welcome-icon">✦</div><div><strong>Empieza por preguntar algo sobre el proyecto</strong><span>El chat conserva el contexto de la vista seleccionada.</span></div><button className="suggestion" onClick={() => setChatInput("Revisa el proyecto seleccionado y genera un diagrama Mermaid basado sólo en el código real.")}>Revisar y diagramar <span>↗</span></button></section>
+            <section className="welcome-strip"><div className="welcome-icon">✦</div><div><strong>Empieza por preguntar algo sobre el proyecto</strong><span>El chat conserva el contexto de la vista seleccionada.</span></div><button className="suggestion" onClick={() => setChatInput(reviewPrompt(section))}>Revisar y diagramar <span>↗</span></button></section>
           </div>
         </main>
 

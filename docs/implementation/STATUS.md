@@ -3,16 +3,17 @@
 ## Estado actual
 
 ```yaml
-phase: '04'
+phase: '05'
 state: IN_PROGRESS
-baselineCommit: 8d96bc2
+baselineCommit: 43341b9
 branch: main
-gate: GATE-04
+gate: F05-NOTES-BROWNFIELD
 userDecision: APPROVED
-latestVerifiedCommit: eea9ba6
+nextPhase: '05'
+latestVerifiedCommit: 43341b9
 ```
 
-El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementada y verificada contra el proceso OMP real; las verificaciones no usan emulador.
+El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementada y verificada contra el proceso OMP real; Fase 05 inicia la inspección brownfield de `/Users/luis/projects/notes`.
 
 ## Fase 04 — chat OMP visible
 
@@ -47,7 +48,7 @@ El producto requiere que el usuario tenga OMP instalado, autenticado y con model
 |---|---|---|
 | `pnpm build:all` | pass | renderer y main Electron compilados |
 | `pnpm lint` | pass | ESLint sin errores |
-| `pnpm test` | pass | 7 archivos, 14 tests; integración OMP real y parser Mermaid |
+| `pnpm test` | pass | 7 archivos, 15 tests; integración OMP real, parser Mermaid y evidencia Notes |
 | `pnpm test:e2e` | pass | Electron real: mensaje enviado y respuesta `OMP_REAL_OK` |
 | `pnpm test:f03` | pass | 3 tests contra el proceso OMP real |
 | `pnpm spike:omp-adapter` | pass | OMP real: ready, streaming, settled |
@@ -98,6 +99,56 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 2. La host tool real requería descripción no vacía y `parameters` como JSON Schema object. El adapter y el proceso Electron ya los envían.
 3. El probe real final pasó: `ready`, negociación v2, streaming, `message_end`, `prompt_result` y `session_settled`.
 
+## Fase 05 — proyecto brownfield Notes
+
+| ID | Estado | Output verificable |
+|---|---|---|
+| F05-T01 | done | `PROJECTSTUDIO_PROJECT_ROOT` apunta a `/Users/luis/projects/notes` |
+| F05-T02 | done | OMP real extrae ProductShape desde `docs/product/` |
+| F05-T03 | done | OMP real contrasta arquitectura en `src/` y `tests/` |
+| F05-T04 | done | Mermaid ProductShape y arquitectura renderizados en el chat |
+| F05-T05 | done | respuestas, capturas y `notes-brownfield.md` persistidos |
+
+### Verificación F05
+
+```bash
+pnpm test:e2e:notes
+```
+
+Resultado observado: pass en una ejecución real. OMP trabajó con `projectRoot=/Users/luis/projects/notes`, generó dos respuestas asentadas y dos diagramas Mermaid.
+
+Para iterar el renderer sin consumir otra respuesta OMP:
+
+```bash
+pnpm test
+```
+
+El test de diagramas reutiliza el Mermaid guardado en `F05-T01-notes-productshape-real.md`.
+
+Evidencia:
+
+- `docs/implementation/evidence/F05-T01-notes-productshape-real.md`
+- `docs/implementation/evidence/F05-T01-notes-productshape-real.png`
+- `docs/implementation/evidence/F05-T01-notes-productshape-real.mermaid`
+- `docs/implementation/evidence/F05-T02-notes-architecture-real.md`
+- `docs/implementation/evidence/F05-T02-notes-architecture-real.png`
+- `docs/implementation/notes-brownfield.md`
+
+Bloqueos y límites:
+
+- El repo Notes tiene cambios locales preexistentes; ProjectStudio no los modifica.
+- `graphify-out/GRAPH_REPORT.md` está desactualizado: fue construido sobre `e7a7fe89`, mientras el HEAD observado es `a5cb123b`.
+- ProductShape y arquitectura ya producen hallazgos reales; la publicación durable en un modelo semántico editable y el timeline de artefactos quedan para el siguiente slice.
+
+Checklist manual:
+
+- [ ] Ejecutar `pnpm desktop:notes`.
+- [ ] Confirmar que el selector muestra `notes · cwd configurado`.
+- [ ] Abrir `ProductShape` y pedir lectura prioritaria de `docs/product`.
+- [ ] Abrir `Arquitectura` y pedir contraste contra `src/` y `tests/`.
+- [ ] Confirmar que el chat termina en `settled`.
+- [ ] Confirmar que ambos bloques Mermaid aparecen como diagramas visuales.
+
 ## Fases anteriores
 
 - Fase 00: contratos RPC JSONL y spike LangGraph/SQLite.
@@ -111,10 +162,9 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 - Workbench vivo, tabs/historial y timeline durables.
 - Capturas e imágenes publicadas por VAB.
 - Diagramas semánticos incrementales.
-- Brownfield real sobre `notes`; el selector de UI sigue siendo demo y no se ha modificado ese proyecto.
 - Permission Broker real y side effects externos.
 - Edición Git/worktrees.
 
 ## Próximo slice
 
-Fase 05: preparar la ruta de artefactos visuales/capturas con validación de scope y persistencia, sin inventar compatibilidad de tools que el OMP real no haya demostrado.
+Fase 06: publicar artefactos visuales y modelos semánticos durables con scope y persistencia.

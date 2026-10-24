@@ -39,7 +39,19 @@ pnpm desktop
 
 El modo normal es OMP real. El panel debe mostrar `OMP · REAL`; una instalación sin login/modelo muestra el error de configuración en el chat.
 
-Para inspeccionar otro repositorio local, incluido DrumCoach cuando exista en esta máquina:
+Para abrir el proyecto brownfield Notes usado como ejemplo:
+
+```bash
+pnpm desktop:notes
+```
+
+Equivale a:
+
+```bash
+PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm desktop
+```
+
+Para inspeccionar otro repositorio local:
 
 ```bash
 PROJECTSTUDIO_PROJECT_ROOT=/ruta/absoluta/al/proyecto pnpm desktop
@@ -50,14 +62,16 @@ El proceso OMP recibe esa ruta como `cwd`; las sesiones se guardan en `.tmp/omp-
 ## Qué comprobar manualmente
 
 1. Cambia entre `Resumen`, `ProductShape`, `Arquitectura`, `Evidencia` y `Cambios`.
-2. Comprueba que el selector muestra el nombre del repositorio configurado por `PROJECTSTUDIO_PROJECT_ROOT`.
-3. Cambia entre tema oscuro y claro.
-4. Arrastra el borde del explorador izquierdo y del chat derecho.
-5. Escribe `Revisa el proyecto seleccionado y genera un diagrama Mermaid basado sólo en el código real.` en el chat y pulsa `Enviar`.
-6. Si OMP devuelve un bloque ` ```mermaid `, ProjectStudio lo pinta como mapa visual dentro del chat y conserva el texto recibido.
-7. Comprueba que aparecen deltas parciales y una respuesta final del modelo configurado.
-8. Comprueba que el estado del chat termina en `settled`.
-9. Abre el menú `Ver` para probar Reload, DevTools y fullscreen.
+2. En `ProductShape`, pide a OMP que lea primero `docs/product` y extraiga propósito, actores, casos de uso, bounded contexts, reglas y restricciones.
+3. En `Arquitectura`, pide que contraste esos hallazgos con `src/` y `tests/`.
+4. Comprueba que el selector muestra el nombre del repositorio configurado por `PROJECTSTUDIO_PROJECT_ROOT`.
+5. Cambia entre tema oscuro y claro.
+6. Arrastra el borde del explorador izquierdo y del chat derecho.
+7. Escribe una petición de revisión y diagrama en el chat y pulsa `Enviar`.
+8. Si OMP devuelve un bloque Mermaid, ProjectStudio lo pinta como mapa visual dentro del chat y conserva el texto recibido.
+9. Comprueba que aparecen deltas parciales y una respuesta final del modelo configurado.
+10. Comprueba que el estado del chat termina en `settled`.
+11. Abre el menú `Ver` para probar Reload, DevTools y fullscreen.
 
 ## Ejecutar verificaciones
 

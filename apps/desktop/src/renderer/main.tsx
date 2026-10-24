@@ -5,12 +5,12 @@ import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
-type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; live?: boolean };
+type ProgressStep = { id: string; title: string; detail: string; status: "active" | "done" };
 type PdacPage = "overview" | "use-cases" | "actors" | "rules" | "contexts";
 type PdacFocus = "all" | "use-cases" | "actors" | "rules" | "contexts";
 const pdacPageLabels: Record<PdacPage, string> = { overview: "ProductShape", "use-cases": "Casos de uso", actors: "Actores", rules: "Reglas y restricciones", contexts: "Bounded contexts" };
 
-function extractAssistantFindings(text: string): AssistantFinding[] {
+function extractAssistantFindings(text: string, includeSummary = true): AssistantFinding[] {
   const withoutDiagram = text.replace(/```[\s\S]*?```/g, "");
   const normalized = withoutDiagram.replace(/\s+(?=#{1,3}\s+)/g, "\n");
   const lines = normalized.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -29,11 +29,40 @@ function extractAssistantFindings(text: string): AssistantFinding[] {
     const inlineDetail = boundary >= 0 ? normalizedTitle.slice(boundary).trim() : "";
     const detail = inlineDetail || lines.slice(index + 1).find((line) => !/^(?:#{1,3}\s+|\*\*|[-*]\s+)/.test(line))?.replace(/\*\*/g, "").trim();
     const evidence = /(?:[\w./-]+\.(?:md|tsx?|py|json))(?:[:#]\d+(?:-\d+)?)?/.exec(`${title} ${detail ?? ""}`)?.[0];
-    findings.push({ id: `${Date.now()}-${findings.length}`, title, detail: (detail ?? "Hallazgo publicado por el asistente.").slice(0, 180), evidence });
+    findings.push({ id: findingId(title, findings.length), title, detail: (detail ?? "Hallazgo publicado por el asistente.").slice(0, 180), evidence });
   }
   if (findings.length > 0) return findings;
   const summary = withoutDiagram.replace(/\s+/g, " ").trim();
-  return summary ? [{ id: `${Date.now()}-summary`, title: "Resultado de la revisión", detail: summary.slice(0, 180) }] : [];
+  return includeSummary && summary ? [{ id: "finding-summary", title: "Resultado de la revisión", detail: summary.slice(0, 180) }] : [];
+}
+function extractStreamingProgress(text: string): { title: string; detail: string } | undefined {
+  const lines = text
+    .replace(/```[\s\S]*?```/g, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+    .filter(Boolean);
+  if (lines.length === 0) return undefined;
+  const headings = lines.filter((line) => /^#{1,4}\s+/.test(line)).map((line) => line.replace(/^#{1,4}\s+/, "").replace(/\*\*/g, "").trim());
+  const currentSection = headings.at(-1);
+  const latest = lines.at(-1)?.replace(/^#{1,4}\s+/, "").replace(/\*\*/g, "").trim();
+  if (!latest) return undefined;
+  return {
+    title: currentSection ? `Analizando: ${currentSection.slice(0, 80)}` : "Evidencia recibida",
+    detail: latest.slice(0, 180),
+  };
+}
+function buildEvidencePreviewMermaid(findings: AssistantFinding[]): string {
+  const lines = ["flowchart LR", 'Evidence["Evidencia OMP · hallazgos recibidos"]'];
+  findings.slice(0, 6).forEach((finding, index) => {
+    const label = finding.title.replace(/["[\]`]/g, "").slice(0, 70);
+    lines.push(`H${index + 1}["${label}"]`);
+    lines.push(`Evidence -.-> H${index + 1}`);
+  });
+  return lines.join("\n");
+}
+function findingId(title: string, index: number): string {
+  const slug = title.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/gi, "-").replace(/^-|-$/g, "").slice(0, 48);
+  return `finding-${index}-${slug || "hallazgo"}`;
 }
 function detectLiveFinding(text: string): AssistantFinding | undefined {
   const heading = /(?:^|\n)\s*#{1,4}\s*(?:\d+\.\s*)?(Casos de uso principales|Actores|Propósito y frontera del producto|Bounded contexts|Reglas e invariantes|Restricciones)/im.exec(text);
@@ -46,6 +75,13 @@ function detectLiveFinding(text: string): AssistantFinding | undefined {
     detail: "El asistente acaba de identificarlo; el mapa provisional se actualizará con esta evidencia.",
     live: true,
   };
+}
+function describeToolCall(name: string): { title: string; detail: string } {
+  const normalized = name.toLowerCase();
+  if (/read|cat|file|open/.test(normalized)) return { title: "Leyendo evidencia del proyecto", detail: "OMP está contrastando documentos y archivos existentes." };
+  if (/search|grep|find|glob/.test(normalized)) return { title: "Buscando señales del modelo", detail: "OMP está localizando conceptos, actores y reglas en el repositorio." };
+  if (/shell|exec|command|run/.test(normalized)) return { title: "Verificando el comportamiento real", detail: "OMP está comprobando rutas y relaciones contra el código." };
+  return { title: `Herramienta OMP · ${name}`, detail: "ProjectStudio recibió una actualización de la inspección." };
 }
 
 const navigation: Array<{ section: Section; icon: string; detail: string }> = [
@@ -75,7 +111,14 @@ function pdacEntityPrompt(page: Exclude<PdacPage, "overview">): string {
         : "bounded contexts, límites y relaciones entre contextos";
   return `PRODUCTSHAPE: profundiza sólo en ${focus}. Usa primero docs/product y contrasta con el código. Devuelve hallazgos con rutas verificables y actualiza el diagrama Mermaid sólo con relaciones confirmadas. No inventes datos.`;
 }
+function pdacGuidance(signalId: string): { title: string; detail: string; prompt: string } {
+  if (signalId === "purpose") return { title: "Confirmar propósito y frontera", detail: "Primero necesito separar qué problema resuelve el producto de lo que queda fuera.", prompt: "PRODUCTSHAPE: profundiza en el propósito y la frontera del producto. Usa docs/product y el código como contraste. Devuelve sólo hechos, incógnitas y rutas verificables. No inventes datos ni arquitectura alternativa." };
+  if (signalId === "actors") return { title: "Identificar actores", detail: "Después comprobaremos quién usa, opera o alimenta el sistema.", prompt: pdacEntityPrompt("actors") };
+  if (signalId === "use-cases") return { title: "Ordenar casos de uso", detail: "Con los actores claros, el siguiente paso es describir sus objetivos y resultados.", prompt: pdacEntityPrompt("use-cases") };
+  if (signalId === "rules") return { title: "Hacer explícitas las reglas", detail: "Buscaremos invariantes y restricciones que no deberían perderse al cambiar el sistema.", prompt: pdacEntityPrompt("rules") };
+  return { title: "Delimitar bounded contexts", detail: "Por último agruparemos capacidades y límites sólo donde haya evidencia suficiente.", prompt: pdacEntityPrompt("contexts") };
 
+}
 function DiagramVisual({ source, canvas = false }: { source: string; canvas?: boolean }): JSX.Element {
   const diagram = parseMermaid(source);
   const layout = layoutDiagram(diagram);
@@ -130,8 +173,6 @@ function stringField(value: Record<string, unknown>, key: string): string | unde
   return typeof value[key] === "string" ? value[key] as string : undefined;
 }
 function displayChatStatus(status: string): string {
-  if (status === "ready" || status === "settled") return "listo";
-  if (status === "failed") return "requiere atención";
   if (status === "starting" || status === "submitting") return "iniciando";
   return "trabajando";
 }
@@ -160,20 +201,37 @@ function App(): JSX.Element {
   const [chatStatus, setChatStatus] = useState("starting");
   const [chatError, setChatError] = useState("");
   const [activity, setActivity] = useState("Preparando el proyecto");
+  const [streamingProgress, setStreamingProgress] = useState<{ title: string; detail: string } | null>(null);
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [bootstrapFailed, setBootstrapFailed] = useState(false);
   const streamingDraft = useRef("");
   const [sending, setSending] = useState(false);
   const queuedObjective = useRef<{ prompt: string; workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning" } | null>(null);
   const streamingRevisionId = useRef<string | null>(null);
-  function publishStreamingDiagram(source: string): void {
+  function publishStreamingDiagram(source: string, label = "Vista provisional en directo"): void {
     const revisionId = streamingRevisionId.current ?? `streaming-${Date.now()}`;
     streamingRevisionId.current = revisionId;
-    const revision: DiagramRevision = { id: revisionId, source, label: "Vista provisional en directo", status: "provisional", createdAt: "generándose ahora" };
+    const revision: DiagramRevision = { id: revisionId, source, label, status: "provisional", createdAt: "generándose ahora" };
     setDiagramRevisions((current) => {
       const existing = current.some((candidate) => candidate.id === revisionId);
       return existing ? current.map((candidate) => candidate.id === revisionId ? revision : candidate) : [...current, revision].slice(-12);
     });
     setSelectedDiagramRevisionId(revisionId);
+  }
+  function beginProgress(): void {
+    setProgressSteps([{ id: "inspect", title: "Preparando la inspección", detail: "ProjectStudio ha enviado el objetivo al workflow brownfield.", status: "active" }]);
+  }
+  function addProgressStep(step: Omit<ProgressStep, "id">): void {
+    setProgressSteps((current) => [
+      ...current.map((item) => item.status === "active" ? { ...item, status: "done" as const } : item),
+      { ...step, id: `progress-${Date.now()}` },
+    ].slice(-6));
+  }
+  function updateProgress(title: string, detail: string): void {
+    setProgressSteps((current) => {
+      if (current.length === 0) return [{ id: "stream", title, detail, status: "active" }];
+      return current.map((item, index) => index === current.length - 1 ? { ...item, title, detail } : item);
+    });
   }
 
   async function reloadProjectSurface(): Promise<void> {
@@ -218,31 +276,56 @@ function App(): JSX.Element {
     const unsubscribe = window.studio.chat.onEvent((event) => {
       if (event.type === "status") {
         setChatStatus(event.status);
-        if (event.status === "starting") setActivity("Conectando con OMP…");
+        if (event.status === "starting") {
+          setActivity("Conectando con OMP…");
+          updateProgress("Conectando con OMP", "Esperando la sesión real del asistente.");
+        }
       } else if (event.type === "ready") {
         setChatStatus("ready");
         setActivity("Listo para continuar");
+        updateProgress("Sesión OMP lista", "El workflow puede comenzar la inspección.");
       } else if (event.type === "message_update") {
         const delta = visibleTextDelta(event.frame);
         if (delta) {
           streamingDraft.current += delta;
+          const progress = extractStreamingProgress(streamingDraft.current);
+          if (progress) {
+            setStreamingProgress(progress);
+            updateProgress(progress.title, progress.detail);
+          } else {
+            updateProgress("Recibiendo hallazgos de OMP", "Cada hallazgo confirmado actualiza el centro y el mapa provisional.");
+          }
+          const partialFindings = extractAssistantFindings(streamingDraft.current, false);
           const source = extractMermaid(streamingDraft.current);
+          if (partialFindings.length > 0) {
+            setAssistantFindings((current) => {
+              const incomingIds = new Set(partialFindings.map((finding) => finding.id));
+              return [...partialFindings, ...current.filter((finding) => !incomingIds.has(finding.id) && !finding.live)].slice(0, 8);
+            });
+            if (!source) publishStreamingDiagram(buildEvidencePreviewMermaid(partialFindings), "Mapa incremental de hallazgos");
+          }
           if (source) publishStreamingDiagram(source);
           const liveFinding = detectLiveFinding(streamingDraft.current);
           if (liveFinding) setAssistantFindings((current) => current.some((finding) => finding.id === liveFinding.id) ? current : [liveFinding, ...current].slice(0, 8));
+        } else {
+          updateProgress("Recibiendo hallazgos de OMP", "Cada hallazgo confirmado actualiza el centro y el mapa provisional.");
         }
         setActivity("OMP está analizando el proyecto…");
       } else if (event.type === "host_tool_call") {
-        setActivity("ProjectStudio está preparando una actualización…");
+        const tool = describeToolCall(event.call.name);
+        addProgressStep({ ...tool, status: "active" });
+        setActivity(tool.title);
       } else if (event.type === "message_end") {
         const text = stringField(event.frame, "text") ?? streamingDraft.current;
         streamingDraft.current = "";
+        setStreamingProgress(null);
         if (text) {
           setMessages((current) => [...current, { author: "omp", text }]);
           setAssistantFindings((current) => [...extractAssistantFindings(text), ...current.filter((finding) => !finding.live)].slice(0, 8));
           const source = extractMermaid(text);
           if (source) publishStreamingDiagram(source);
           streamingRevisionId.current = null;
+          addProgressStep({ title: "Resultado recibido", detail: "El centro y el mapa ya tienen la respuesta completa de OMP.", status: "done" });
           setActivity("Hallazgos preparados");
         }
       } else if (event.type === "session_settled") {
@@ -280,22 +363,31 @@ function App(): JSX.Element {
   );
   const latestDiagram = selectedDiagramRevision?.source ?? [...messages].reverse().map((message) => extractMermaid(message.text)).find((source): source is string => Boolean(source)) ?? storedDiagram;
   const pdacSignals = useMemo(() => {
-    const text = assistantFindings.map((finding) => `${finding.title} ${finding.detail}`).join(" ").toLowerCase();
+    const patterns = {
+      purpose: /propósito|frontera|producto/i,
+      actors: /actor|aprendiz|operador|learner|teacher|usuario/i,
+      "use-cases": /caso de uso|importar material|practicar|explorar biblioteca|worker local|playback/i,
+      rules: /regla|restric|invariant|local-first|debe|permit|historial/i,
+      contexts: /bounded context|contexto delimitado|instrument-specific|practice material|transcription|acquisition/i,
+    } as const;
+    const hasEvidence = (pattern: RegExp) => assistantFindings.some((finding) => pattern.test(`${finding.title} ${finding.detail}`));
     return [
-      { id: "purpose", label: "Propósito", state: /propósito|frontera|producto/.test(text) ? "found" : "pending" },
-      { id: "actors", label: "Actores", state: /actor|aprendiz|operador/.test(text) ? "found" : "pending" },
-      { id: "use-cases", label: "Casos de uso", state: /caso de uso|importar material|practicar|explorar biblioteca/.test(text) ? "found" : "pending" },
-      { id: "rules", label: "Reglas y restricciones", state: /regla|restric|invariant|local-first/.test(text) ? "found" : "pending" },
-      { id: "contexts", label: "Bounded contexts", state: /bounded context|contexto delimitado|instrument-specific|practice material/.test(text) ? "found" : "pending" },
+      { id: "purpose", label: "Propósito", state: hasEvidence(patterns.purpose) ? "found" : "pending" },
+      { id: "actors", label: "Actores", state: hasEvidence(patterns.actors) ? "found" : "pending" },
+      { id: "use-cases", label: "Casos de uso", state: hasEvidence(patterns["use-cases"]) ? "found" : "pending" },
+      { id: "rules", label: "Reglas y restricciones", state: hasEvidence(patterns.rules) ? "found" : "pending" },
+      { id: "contexts", label: "Bounded contexts", state: hasEvidence(patterns.contexts) ? "found" : "pending" },
     ] as const;
   }, [assistantFindings]);
+  const nextPdacSignal = pdacSignals.find((signal) => signal.state === "pending");
+  const nextPdacGuidance = pdacGuidance(nextPdacSignal?.id ?? "purpose");
   const visibleFindings = useMemo(() => {
     if (pdacFocus === "all") return assistantFindings;
     const patterns: Record<Exclude<PdacFocus, "all">, RegExp> = {
-      "use-cases": /caso de uso|importar material|practicar|explorar biblioteca/i,
-      actors: /actor|aprendiz|operador/i,
-      rules: /regla|restric|invariant|local-first/i,
-      contexts: /bounded context|contexto delimitado|instrument-specific|practice material/i,
+      "use-cases": /caso de uso|importar material|practicar|explorar biblioteca|worker local|playback/i,
+      actors: /actor|aprendiz|operador|learner|teacher|usuario/i,
+      rules: /regla|restric|invariant|local-first|debe|permit|historial/i,
+      contexts: /bounded context|contexto delimitado|instrument-specific|practice material|transcription|acquisition/i,
     };
     const pattern = patterns[pdacFocus];
     return assistantFindings.filter((finding) => pattern.test(`${finding.title} ${finding.detail}`));
@@ -336,7 +428,10 @@ function App(): JSX.Element {
     setMessages((current) => [...current, { author: "user", text }]);
     setChatInput("");
     setChatError("");
+    streamingDraft.current = "";
+    setStreamingProgress(null);
     streamingRevisionId.current = null;
+    beginProgress();
     setSending(true);
     setActivity("Preparando la tarea…");
     try {
@@ -473,7 +568,7 @@ function App(): JSX.Element {
           </div>
           <div className="content-scroll">
             <div className="breadcrumb"><span>{project.split(" · ")[0]}</span><span>/</span><strong>{section === "ProductShape" ? pdacPageLabels[pdacPage] : selectedNavigation.section}</strong><span className="breadcrumb-spacer" /><span className="revision-label">OMP real · cwd activo</span></div>
-            <section className="welcome-strip">
+            {section !== "ProductShape" && <section className="welcome-strip">
               <div className="welcome-icon">✦</div>
               <div>
                 <strong>{sending ? "Descubrimiento en curso" : "Siguiente paso recomendado"}</strong>
@@ -482,7 +577,7 @@ function App(): JSX.Element {
               {bootstrapFailed
                 ? <button className="outline-button" onClick={() => void continueDiscovery()}>Continuar análisis</button>
                 : <span className="suggestion-note">El Arquitecto de Proyecto te propone objetivos en el chat.</span>}
-            </section>
+            </section>}
             <section className="hero-section">
               <div>
                 <div className="eyebrow">PROYECTO LOCAL · INSPECCIÓN REAL</div>
@@ -495,6 +590,7 @@ function App(): JSX.Element {
             </section>
             {section === "ProductShape" ? (
               <section className="pdac-workbench">
+                {sending && <article className="panel-card pdac-progress-panel" aria-live="polite"><div className="pdac-progress-heading"><div><div className="card-kicker">ACTIVIDAD DEL ASISTENTE</div><h2>{progressSteps.at(-1)?.title ?? "Preparando la inspección"}</h2><p>{progressSteps.at(-1)?.detail ?? "El workflow está comenzando."}</p></div><span className="live-badge"><span className="active" />EN DIRECTO</span></div><div className="pdac-progress-track">{progressSteps.map((step) => <div className={`pdac-progress-step ${step.status}`} key={step.id} title={step.detail}><span className="pdac-progress-marker">{step.status === "done" ? "✓" : "·"}</span><strong>{step.title}</strong></div>)}</div></article>}
                 <article className="panel-card pdac-state-card">
                   <div className="pdac-state-header">
                     <div>
@@ -509,15 +605,17 @@ function App(): JSX.Element {
                     {pdacSignals.map((signal) => <button className={`pdac-signal ${signal.state} ${pdacFocus === signal.id ? "selected" : ""}`} key={signal.id} onClick={() => openPdacPage(signal.id)} aria-pressed={pdacPage === signal.id}><span className="pdac-signal-dot" /><strong>{signal.label}</strong><small>{signal.state === "found" ? "ver página" : "pendiente"}</small></button>)}
                   </div>
                 </article>
+                <article className="panel-card pdac-guide-card"><div className="pdac-guide-copy"><div className="card-kicker">GUÍA PDAC · SIGUIENTE PASO</div><h2>{nextPdacSignal ? nextPdacGuidance.title : "Base PDAC cubierta"}</h2><p>{sending ? "Estoy contrastando la evidencia del repositorio. Verás aquí cada avance antes del resultado final." : nextPdacSignal ? nextPdacGuidance.detail : "Ya hay evidencia visible en las cinco áreas. Revisa los hallazgos antes de convertirlos en un modelo canónico."}</p></div>{nextPdacSignal && !sending && <button className="outline-button primary-review" onClick={() => void sendMessage(nextPdacGuidance.prompt, "brownfield-discovery")}>Trabajar este foco <span>→</span></button>}</article>
                 {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">ENTIDAD PDAC</div><h2>{pdacPageLabels[pdacPage]}</h2><p>Esta página reúne sólo la evidencia disponible para esta entidad. El asistente seguirá completándola sin inventar datos.</p><div className="pdac-entity-count">{visibleFindings.length} hallazgo{visibleFindings.length === 1 ? "" : "s"} visible{sending ? " · actualizando" : ""}</div></div><div className="pdac-entity-actions"><button className="outline-button primary-review" onClick={() => void sendMessage(pdacEntityPrompt(pdacPage))}>{sending ? "Analizando…" : "Profundizar con OMP"}</button><button className="outline-button" onClick={() => openPdacPage("overview")}>← Volver al estado</button></div></article>}
                 <article className="panel-card pdac-diagram-card">
-                  <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"}</div><h2>{latestDiagram ? "Relaciones encontradas" : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
+                  <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"}</div><h2>{latestDiagram ? selectedDiagramRevision?.label === "Mapa incremental de hallazgos" ? "Hallazgos que ya forman el mapa" : "Relaciones encontradas" : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
                   {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones del mapa PDAC">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
                   {latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
                   <button className="card-link" onClick={() => void sendMessage(reviewPrompt("ProductShape"))}>{sending ? "Actualizando mapa…" : "Actualizar mapa con OMP"} <span>→</span></button>
                 </article>
                 <article className="panel-card pdac-details-card">
                   <div className="card-heading"><div><div className="card-kicker">DETALLE DINÁMICO</div><h2>{pdacPage === "overview" ? "Lo que va encontrando" : pdacPageLabels[pdacPage]}</h2></div><button className="pdac-clear-focus" onClick={() => openPdacPage("overview")}>Ver estado</button></div>
+                  {sending && <div className="pdac-live-progress" aria-live="polite"><span className="activity-dot purple" /><div><strong>{streamingProgress?.title ?? "OMP está leyendo el proyecto"}</strong><small>{streamingProgress?.detail ?? "El siguiente hallazgo actualizará el mapa provisional del centro."}</small></div><span className="pdac-progress-pulse" /></div>}
                   <div className="pdac-detail-list" aria-live="polite">
                     {visibleFindings.length > 0 ? visibleFindings.slice(0, 8).map((finding, index) => <div className={`pdac-detail-row ${finding.live ? "live" : ""}`} key={finding.id}><span className="pdac-detail-index">{String(index + 1).padStart(2, "0")}</span><div><strong>{finding.title}</strong>{finding.live && <span className="pdac-new-badge">NUEVO</span>}<small>{finding.detail}{finding.evidence ? ` · ${finding.evidence}` : ""}</small></div></div>) : <div className="assistant-empty"><strong>{sending ? "Esperando el siguiente hallazgo…" : "Esta área todavía no tiene evidencia."}</strong><small>El asistente la completará cuando encuentre información verificable en el proyecto.</small></div>}
                   </div>

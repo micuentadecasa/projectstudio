@@ -161,6 +161,20 @@ h2 { font-size: 16px; }
 .pdac-signal-dot { grid-row: span 2; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
 .pdac-signal.found .pdac-signal-dot { background: var(--green); box-shadow: 0 0 0 3px #65d5a222; }
 .pdac-signal.pending .pdac-signal-dot { background: var(--orange); }
+.pdac-progress-panel { min-height: 0; padding: 10px 14px; border-color: #7783ef55; background: linear-gradient(100deg, var(--surface), var(--accent-soft)); }
+.pdac-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pdac-progress-heading h2 { margin-top: 3px; font-size: 11px; }
+.pdac-progress-heading p { margin: 3px 0 0; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.pdac-progress-track { display: flex; gap: 6px; margin-top: 8px; overflow: hidden; }
+.pdac-progress-step { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: #10182755; }
+.pdac-progress-step.active { border-color: #7783ef88; box-shadow: inset 0 -2px 0 var(--accent); }
+.pdac-progress-step.done { opacity: .62; }
+.pdac-progress-marker { display: grid; place-items: center; width: 13px; height: 13px; flex: 0 0 13px; border-radius: 50%; color: var(--accent); background: var(--accent-soft); font-size: 8px; font-weight: 800; }
+.pdac-progress-step strong { display: block; max-width: 160px; overflow: hidden; color: var(--text); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.pdac-guide-card { min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 17px 20px; border-color: #65d5a244; background: linear-gradient(100deg, var(--surface), #65d5a20b); }
+.pdac-guide-copy { min-width: 0; }
+.pdac-guide-card h2 { margin-top: 4px; font-size: 15px; }
+.pdac-guide-card p { max-width: 680px; margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .pdac-signal strong { font-size: 10px; }
 .pdac-signal small { margin-top: 3px; color: var(--muted); font-size: 9px; }
 .pdac-diagram-card { min-height: 0; padding: 20px; }
@@ -169,7 +183,11 @@ h2 { font-size: 16px; }
 .pdac-diagram-card .generated-system-map .diagram-svg { width: 100%; min-width: 0; min-height: 410px; }
 .pdac-details-card { min-height: 0; padding: 20px; }
 .pdac-clear-focus { border: 0; color: var(--accent); background: transparent; font-size: 10px; }
-.pdac-detail-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; margin-top: 12px; }
+.pdac-live-progress { display: flex; align-items: center; gap: 10px; margin-top: 13px; padding: 11px 12px; border: 1px solid #7783ef55; border-radius: 8px; background: var(--accent-soft); animation: assistant-enter .35s ease both; }
+.pdac-live-progress > div { min-width: 0; flex: 1; }
+.pdac-live-progress strong { display: block; overflow: hidden; color: var(--text); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.pdac-live-progress small { display: block; margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.pdac-progress-pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px #7783ef20; animation: assistant-pulse 1.25s ease-in-out infinite; }
 .pdac-detail-row { display: grid; grid-template-columns: 28px 1fr; gap: 10px; min-height: 78px; padding: 12px 0; border-bottom: 1px solid var(--line); animation: assistant-enter .42s ease both; }
 .pdac-detail-row.live { border-left: 2px solid var(--accent); padding-left: 10px; background: #6977df0b; }
 .pdac-detail-index { color: var(--accent); font-size: 10px; font-weight: 750; }

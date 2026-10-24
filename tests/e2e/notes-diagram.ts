@@ -22,7 +22,9 @@ try {
   await window.getByTitle("Producto y casos de uso").click();
   await window.getByRole("heading", { name: "ProductShape" }).waitFor();
   await window.getByRole("heading", { name: "Lo que va encontrando" }).waitFor();
-  if (await window.locator(".pdac-detail-row").count() === 0) throw new Error("Stored ProductShape report did not produce dynamic PDAC details");
+  await window.getByText("GUÍA PDAC · SIGUIENTE PASO", { exact: true }).waitFor();
+  if (await window.locator(".welcome-strip").count() !== 0) throw new Error("ProductShape still shows the duplicated upper status");
+  if (await window.locator(".pdac-guide-card").count() !== 1) throw new Error("ProductShape guide card is missing");
   await window.getByRole("button", { name: /Casos de uso/ }).click();
   await window.getByRole("heading", { level: 1, name: "Casos de uso" }).waitFor();
   await window.getByText("ENTIDAD PDAC", { exact: true }).waitFor();

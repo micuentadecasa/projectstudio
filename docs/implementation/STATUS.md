@@ -129,6 +129,8 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T19 | done | panel ProductShape reordenado como timeline vivo; diagrama ocupa el ancho principal y anuncia casos de uso nuevos durante streaming |
 | F05-T20 | done | botones del estado PDAC abren páginas de Casos de uso, Actores, Reglas y Bounded contexts y conservan el mapa |
 | F05-T21 | done | páginas de entidad muestran conteo de hallazgos, filtro contextual y acción `Profundizar con OMP`; el estado Notes pasa a 5/5 áreas con evidencia |
+| F05-T22 | done | durante el streaming el centro muestra actividad segura del OMP, hallazgos parciales y mapa incremental de evidencia antes del Mermaid final |
+| F05-T23 | done | guía PDAC calcula el siguiente foco pendiente, alinea el contador con los hallazgos filtrables y elimina el status superior duplicado de ProductShape |
 ### Verificación F05
 
 ```bash

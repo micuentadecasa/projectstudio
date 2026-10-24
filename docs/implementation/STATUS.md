@@ -120,7 +120,7 @@ Resultado observado: pass en una ejecución real. OMP trabajó con `projectRoot=
 Para iterar el renderer sin consumir otra respuesta OMP:
 
 ```bash
-pnpm test
+pnpm vitest run tests/diagrams.test.ts
 ```
 
 El test de diagramas reutiliza el Mermaid guardado en `F05-T01-notes-productshape-real.md`.

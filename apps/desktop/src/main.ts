@@ -274,7 +274,11 @@ async function bootstrapDiscovery(resume: boolean): Promise<{ status: DiscoveryS
   if (stored.mermaid) return { status: "stored-artifact", started: false };
   const previous = await readDiscoveryMarker();
   if (previous?.status === "completed") return { status: "completed", started: false };
-  if (previous?.status === "running" && !resume) return { status: "running", started: false };
+  if (previous?.status === "running" && !resume) {
+    const updatedAt = Date.parse(previous.updatedAt);
+    if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > 30_000) return { status: "failed", started: false, canResume: true };
+    return { status: "running", started: false };
+  }
   if (previous?.status === "failed" && !resume) return { status: "failed", started: false, canResume: true };
 
   await writeDiscoveryMarker("running");

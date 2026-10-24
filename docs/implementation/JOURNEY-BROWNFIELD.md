@@ -38,6 +38,7 @@ Terminar con:
 
 ## Verificación automatizada asociada
 
+- `pnpm test:e2e:journey`: arranque con discovery interrumpido; la UI muestra `Continuar análisis` en vez de dejar objetivos bloqueados indefinidamente.
 - `pnpm test:f04`: pasos 3–7 con OMP real; hace clic en **Entender el proyecto**, verifica respuesta final y ausencia de prompt interno.
 - `pnpm test:e2e:notes:diagram`: pasos 1–2 y 5 con el artefacto Mermaid almacenado; `tokensUsed: false`.
 - `pnpm test:e2e:projects`: paso 8; archiva la referencia y verifica que la ruta sigue existiendo.

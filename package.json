@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e:notes": "pnpm build:all && tsx tests/e2e/notes-brownfield.ts",
-    "test:e2e:projects": "pnpm build:all && tsx tests/e2e/project-management.ts",
+    "test:e2e:journey": "pnpm build:all && tsx tests/e2e/brownfield-journey.ts",
     "test:e2e:notes:diagram": "pnpm build:all && tsx tests/e2e/notes-diagram.ts",
     "test:f02": "vitest run tests/studio-graph.test.ts",
     "test:f03": "vitest run tests/omp-rpc.test.ts tests/omp-adapter.test.ts",

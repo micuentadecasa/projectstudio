@@ -110,11 +110,12 @@ Smoke Electron real:
 
 ```bash
 pnpm test:f04
+pnpm test:e2e:journey
 pnpm test:e2e:projects
 pnpm test:e2e:notes:diagram
 ```
 
-`test:f04` usa el OMP instalado y autenticado por el usuario. `test:e2e:projects` prueba el archivado reversible y confirma que la ruta sigue existiendo. `test:e2e:notes:diagram` reutiliza el Mermaid almacenado, no envía prompts ni consume tokens.
+`test:f04` usa el OMP instalado y autenticado por el usuario y recorre el click de un objetivo hasta la respuesta real. `test:e2e:journey` verifica que un discovery interrumpido ofrece `Continuar análisis`. `test:e2e:projects` prueba el archivado reversible y confirma que la ruta sigue existiendo. `test:e2e:notes:diagram` reutiliza el Mermaid almacenado, no envía prompts ni consume tokens.
 
 El smoke de Playwright usa el OMP instalado y autenticado por el usuario. Genera capturas reales en:
 

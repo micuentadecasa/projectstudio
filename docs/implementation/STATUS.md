@@ -120,6 +120,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T10 | done | `.tmp/projectstudio-projects.json`, detección al retomar y ADR-024 |
 | F05-T11 | done | personalidad visible del Arquitecto de Proyecto, objetivos sugeridos dentro del chat y composer visible |
 | F05-T12 | done | `docs/implementation/JOURNEY-BROWNFIELD.md`: journey brownfield, reglas de orden y smoke asociado |
+| F05-T13 | done | discovery interrumpido se marca reanudable; no deja objetivos bloqueados por un marcador stale |
 ### Verificación F05
 
 ```bash

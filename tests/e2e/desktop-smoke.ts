@@ -20,21 +20,22 @@ try {
   await window.getByRole("heading", { name: "Tu producto, en contexto" }).waitFor();
   const resizeDirections = await window.locator(".sidebar, .chat-panel").evaluateAll((elements) => elements.map((element) => getComputedStyle(element).resize));
   if (resizeDirections.some((direction) => direction !== "horizontal")) throw new Error(`panel resize contract failed: ${resizeDirections.join(",")}`);
-  await window.screenshot({ path: resolve(evidenceDirectory, "F01-T03-desktop-dark.png"), fullPage: true });
+  await window.screenshot({ path: resolve(evidenceDirectory, "F04-T01-desktop-chat-dark.png"), fullPage: true });
 
   await window.getByRole("button", { name: "Cambiar tema" }).click();
-  await window.screenshot({ path: resolve(evidenceDirectory, "F01-T03-desktop-light.png"), fullPage: true });
+  await window.screenshot({ path: resolve(evidenceDirectory, "F04-T01-desktop-chat-light.png"), fullPage: true });
   await window.getByTitle("C4 y escenarios").click();
   await window.getByRole("heading", { name: "Arquitectura" }).waitFor();
   await window.getByLabel("Mensaje para OMP").fill("¿Qué componentes tiene este proyecto?");
   await window.getByRole("button", { name: "Enviar mensaje" }).click();
-  await window.getByText("Demo local: la petición queda registrada para el adaptador OMP de la siguiente fase.").waitFor();
+  await window.getByText("fixture complete").waitFor();
+  await window.screenshot({ path: resolve(evidenceDirectory, "F04-T02-desktop-chat-live.png"), fullPage: true });
 
   const result = {
     title: await window.title(),
     activeSection: await window.locator("h1").innerText(),
     theme: await window.locator(".app-shell").getAttribute("class"),
-    screenshots: ["docs/implementation/evidence/F01-T03-desktop-dark.png", "docs/implementation/evidence/F01-T03-desktop-light.png"],
+    screenshots: ["docs/implementation/evidence/F04-T01-desktop-chat-dark.png", "docs/implementation/evidence/F04-T01-desktop-chat-light.png", "docs/implementation/evidence/F04-T02-desktop-chat-live.png"],
   };
   console.log(JSON.stringify(result, null, 2));
 } finally {

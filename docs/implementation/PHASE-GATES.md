@@ -57,3 +57,17 @@ Salida requerida:
 - `STATUS.md` en `WAITING_USER_APPROVAL`.
 
 Decisión humana: `APPROVED`, `CHANGES_REQUESTED` o `REJECTED`. El silencio no aprueba.
+
+## GATE-04
+
+Entrada: aprobación continua del usuario y Fase 04.
+
+Salida requerida:
+
+- IPC Electron aislado entre renderer, preload y proceso OMP.
+- Chat visible con modo emulador claramente etiquetado.
+- Eventos parciales y final (`message_update`, `message_end`) visibles.
+- Estados `ready`, `streaming`, `settled` y errores visibles.
+- Modo real configurable por `PROJECTSTUDIO_OMP_MODE=real`.
+- E2E con mensaje enviado desde la UI y respuesta recibida.
+- Captura visual posterior a la respuesta.

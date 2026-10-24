@@ -1,8 +1,97 @@
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow, ipcMain, Menu } from "electron";
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
+const projectRoot = join(currentDirectory, "../../..");
+const adapterModuleUrl = pathToFileURL(join(projectRoot, "dist/packages/omp-bridge/src/omp-adapter.js")).href;
+const chatMode = process.env.PROJECTSTUDIO_OMP_MODE === "real" ? "real" : "emulator";
+
+type AdapterEvent = Record<string, unknown>;
+type ChatAdapter = {
+  readonly status: string;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  prompt: (message: string) => Promise<{ requestId: string; command: string; accepted: boolean }>;
+  on: (event: "event", listener: (payload: AdapterEvent) => void) => ChatAdapter;
+};
+type AdapterConstructor = new (options: {
+  command: string;
+  args: string[];
+  cwd: string;
+  sessionKey: string;
+  hostTools: Array<{ name: string; description: string; handler: () => Promise<unknown> }>;
+}) => ChatAdapter;
+
+let mainWindow: BrowserWindow | undefined;
+let chatAdapter: ChatAdapter | undefined;
+let chatStart: Promise<void> | undefined;
+
+function adapterArguments(): { command: string; args: string[] } {
+  if (chatMode === "real") {
+    const sessionDirectory = join(projectRoot, ".tmp", "omp-sessions");
+    mkdirSync(sessionDirectory, { recursive: true });
+    return {
+      command: process.env.OMP_BIN ?? "omp",
+      args: ["--mode", "rpc", "--profile", "projectstudio-phase04", "--session-dir", sessionDirectory, "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--cwd", projectRoot],
+    };
+  }
+  return {
+    command: process.execPath,
+    args: [join(projectRoot, "tests/fixtures/omp-rpc-emulator.mjs")],
+  };
+}
+
+async function getChatAdapter(): Promise<ChatAdapter> {
+  if (chatAdapter) return chatAdapter;
+  // The bridge is compiled by the root build before Electron starts; this keeps the process boundary explicit.
+  const bridge = await import(adapterModuleUrl) as unknown as { OmpAdapter: AdapterConstructor };
+  const processArguments = adapterArguments();
+  chatAdapter = new bridge.OmpAdapter({
+    ...processArguments,
+    cwd: projectRoot,
+    sessionKey: "project-demo/thread-main",
+    hostTools: [{
+      name: "studio_task_progress",
+      description: "Registra progreso interno de una tarea de ProjectStudio.",
+      handler: async () => ({ accepted: true }),
+    }],
+  });
+  chatAdapter.on("event", (event) => mainWindow?.webContents.send("studio:chat:event", event));
+  return chatAdapter;
+}
+
+async function startChat(): Promise<{ mode: string; status: string }> {
+  const adapter = await getChatAdapter();
+  if (!chatStart) {
+    chatStart = adapter.start().catch((error: unknown) => {
+      chatStart = undefined;
+      throw error;
+    });
+  }
+  await chatStart;
+  return { mode: chatMode, status: adapter.status };
+}
+
+function installChatIpc(): void {
+  ipcMain.handle("studio:chat:start", async () => {
+    try {
+      return await startChat();
+    } catch (error) {
+      return { mode: chatMode, status: "failed", error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+  ipcMain.handle("studio:chat:send", async (_event, message: unknown) => {
+    if (typeof message !== "string" || !message.trim()) throw new Error("chat message must be a non-empty string");
+    const adapter = await getChatAdapter();
+    await startChat();
+    return adapter.prompt(message);
+  });
+  ipcMain.handle("studio:chat:stop", async () => {
+    if (chatAdapter) await chatAdapter.stop();
+  });
+}
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -20,6 +109,7 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  mainWindow = window;
   void window.loadFile(join(currentDirectory, "renderer", "index.html"));
   return window;
 }
@@ -46,6 +136,7 @@ function installMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+installChatIpc();
 app.whenReady().then(() => {
   installMenu();
   createWindow();
@@ -55,5 +146,6 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  void chatAdapter?.stop();
   if (process.platform !== "darwin") app.quit();
 });

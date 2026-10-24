@@ -1,9 +1,9 @@
-import React, { StrictMode, useMemo, useState } from "react";
+import React, { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 type Section = "Resumen" | "ProductShape" | "Arquitectura" | "Evidencia" | "Cambios";
-type Message = { author: "user" | "omp"; text: string };
+type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 
 const navigation: Array<{ section: Section; icon: string; detail: string }> = [
   { section: "Resumen", icon: "⌂", detail: "Vista del proyecto" },
@@ -18,6 +18,11 @@ const initialMessages: Message[] = [
   { author: "omp", text: "En esta fase puedes explorar el proyecto demo y navegar por sus vistas." },
 ];
 
+function stringField(frame: Record<string, unknown>, name: string): string | undefined {
+  const value = frame[name];
+  return typeof value === "string" ? value : undefined;
+}
+
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -25,21 +30,76 @@ function App(): JSX.Element {
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [activeTab, setActiveTab] = useState("Resumen");
+  const [chatMode, setChatMode] = useState("emulator");
+  const [chatStatus, setChatStatus] = useState("starting");
+  const [chatError, setChatError] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = window.studio.chat.onEvent((event) => {
+      if (event.type === "status") {
+        setChatStatus(event.status);
+      } else if (event.type === "ready") {
+        setChatStatus("ready");
+      } else if (event.type === "message_update") {
+        const delta = stringField(event.frame, "delta") ?? stringField(event.frame, "text");
+        if (!delta) return;
+        setMessages((current) => {
+          const last = current[current.length - 1];
+          if (last?.author === "omp" && last.streaming) {
+            return [...current.slice(0, -1), { ...last, text: last.text + delta }];
+          }
+          return [...current, { author: "omp", text: delta, streaming: true }];
+        });
+      } else if (event.type === "message_end") {
+        const text = stringField(event.frame, "text");
+        setMessages((current) => {
+          const last = current[current.length - 1];
+          if (last?.author === "omp" && last.streaming) {
+            return [...current.slice(0, -1), { ...last, text: text ?? last.text, streaming: false }];
+          }
+          return text ? [...current, { author: "omp", text }] : current;
+        });
+      } else if (event.type === "session_settled") {
+        setChatStatus("settled");
+        setSending(false);
+      } else if (event.type === "warning" || event.type === "error") {
+        setChatError(event.message);
+        setChatStatus("failed");
+        setSending(false);
+      }
+    });
+
+    void window.studio.chat.start().then((result) => {
+      setChatMode(result.mode);
+      setChatStatus(result.status);
+      if (result.error) setChatError(result.error);
+    }).catch((error: unknown) => {
+      setChatStatus("failed");
+      setChatError(error instanceof Error ? error.message : String(error));
+    });
+    return unsubscribe;
+  }, []);
 
   const selectedNavigation = useMemo(
     () => navigation.find((item) => item.section === section) ?? navigation[0],
     [section],
   );
 
-  function sendMessage(): void {
+  async function sendMessage(): Promise<void> {
     const text = chatInput.trim();
     if (!text) return;
-    setMessages((current) => [
-      ...current,
-      { author: "user", text },
-      { author: "omp", text: "Demo local: la petición queda registrada para el adaptador OMP de la siguiente fase." },
-    ]);
+    setMessages((current) => [...current, { author: "user", text }]);
     setChatInput("");
+    setChatError("");
+    setSending(true);
+    try {
+      await window.studio.chat.send(text);
+    } catch (error) {
+      setSending(false);
+      setChatError(error instanceof Error ? error.message : String(error));
+      setChatStatus("failed");
+    }
   }
 
   return (
@@ -102,9 +162,9 @@ function App(): JSX.Element {
           <div className="sidebar-footer">
             <div className="connection-card">
               <span className="connection-icon">⌁</span>
-              <div><strong>OMP preparado</strong><small>RPC aislado · Fase 03</small></div>
+              <div><strong>{chatMode === "real" ? "OMP real" : "OMP emulado"}</strong><small>RPC v2 · {chatStatus}</small></div>
             </div>
-            <div className="phase-label">FASE 01 · SHELL</div>
+            <div className="phase-label">FASE 04 · CHAT</div>
           </div>
         </aside>
 
@@ -161,16 +221,17 @@ function App(): JSX.Element {
         </main>
 
         <aside className="chat-panel" aria-label="Chat OMP">
-          <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">LOCAL</span></div><div className="chat-context">contexto: {section.toLowerCase()}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
-          <div className="chat-messages">
-            <div className="chat-date">HOY · SESIÓN DEMO</div>
-            {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className="message-bubble"><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.text}</div></div>)}
+          <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">{chatMode === "real" ? "REAL" : "EMULADOR"}</span></div><div className="chat-context">contexto: {section.toLowerCase()} · {chatStatus}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
+          <div className="chat-messages" aria-live="polite">
+            <div className="chat-date">HOY · SESIÓN RPC</div>
+            {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className={`message-bubble ${message.streaming ? "streaming" : ""}`}><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.text || (message.streaming ? "…" : "")}</div></div>)}
           </div>
-          <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">↵ enviar · ⇧↵ nueva línea</span><button className="send-button" onClick={sendMessage} aria-label="Enviar mensaje">↑</button></div></div>
-          <div className="chat-footer"><span className="safe-dot" /> Sesión local · sin red <span className="footer-spacer" /><span>v0.1 demo</span></div>
+          {chatError && <div className="chat-error" role="alert">{chatError}</div>}
+          <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">{sending ? "OMP está respondiendo…" : "↵ enviar · ⇧↵ nueva línea"}</span><button className="send-button" onClick={() => void sendMessage()} aria-label="Enviar mensaje">↑</button></div></div>
+          <div className="chat-footer"><span className="safe-dot" /> RPC local · {chatStatus} <span className="footer-spacer" /><span>v0.2 chat</span></div>
         </aside>
       </div>
-      <footer className="statusbar"><span><span className="status-dot" /> Proyecto listo</span><span>8 casos de uso</span><span>12 evidencias</span><span>rama main</span><span className="statusbar-spacer" /><span>Fase 01 · shell</span></footer>
+      <footer className="statusbar"><span><span className="status-dot" /> Proyecto listo</span><span>8 casos de uso</span><span>12 evidencias</span><span>rama main</span><span className="statusbar-spacer" /><span>Fase 04 · chat RPC</span></footer>
     </div>
   );
 }

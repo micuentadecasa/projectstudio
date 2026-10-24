@@ -21,6 +21,7 @@ export type OmpAdapterEvent =
   | { type: "status"; status: OmpStatus }
   | { type: "ready"; protocolVersion: number }
   | { type: "message_update"; frame: RpcFrame }
+  | { type: "message_end"; frame: RpcFrame }
   | { type: "host_tool_call"; call: HostToolCall }
   | { type: "prompt_result"; frame: RpcFrame }
   | { type: "session_settled" }
@@ -163,6 +164,10 @@ export class OmpAdapter extends EventEmitter {
       case "message_update":
         this.setStatus("streaming");
         this.emitEvent({ type: "message_update", frame });
+        return;
+      case "message_end":
+        this.setStatus("completing");
+        this.emitEvent({ type: "message_end", frame });
         return;
       case "host_tool_call":
         await this.handleHostTool(frame);

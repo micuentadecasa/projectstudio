@@ -46,6 +46,7 @@ describe("OmpAdapter Fase 03", () => {
     expect(events.map((event) => event.type)).toEqual(expect.arrayContaining([
       "ready",
       "message_update",
+      "message_end",
       "host_tool_call",
       "prompt_result",
       "session_settled",

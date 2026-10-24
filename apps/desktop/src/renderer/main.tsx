@@ -15,15 +15,15 @@ const navigation: Array<{ section: Section; icon: string; detail: string }> = [
 ];
 
 const initialMessages: Message[] = [
-  { author: "omp", text: "Hola. Soy el espacio de trabajo local de ProjectStudio." },
-  { author: "omp", text: "En esta fase puedes explorar el proyecto demo y navegar por sus vistas." },
+  { author: "omp", text: "OMP está conectado al proyecto seleccionado." },
+  { author: "omp", text: "Pide una revisión del repositorio para obtener hallazgos y un diagrama basado en su código real." },
 ];
 
 
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [project, setProject] = useState("DrumCoach · demo local");
+  const [project, setProject] = useState("proyecto · configurando");
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [activeTab, setActiveTab] = useState("Resumen");
@@ -70,6 +70,7 @@ function App(): JSX.Element {
     void window.studio.chat.start().then((result) => {
       setChatMode(result.mode);
       setChatStatus(result.status);
+      setProject(`${result.projectName} · cwd configurado`);
       if (result.error) setChatError(result.error);
     }).catch((error: unknown) => {
       setChatStatus("failed");
@@ -111,10 +112,7 @@ function App(): JSX.Element {
         </div>
         <label className="project-picker">
           <span>Proyecto</span>
-          <select value={project} onChange={(event) => setProject(event.target.value)} aria-label="Proyecto activo">
-            <option>DrumCoach · demo local</option>
-            <option>notes · brownfield pendiente</option>
-          </select>
+          <select value={project} aria-label="Proyecto activo" disabled><option>{project}</option></select>
         </label>
         <div className="topbar-context">
           <span className="status-dot" />
@@ -138,8 +136,7 @@ function App(): JSX.Element {
           </div>
           <div className="workspace-tree">
             <div className="tree-root"><span className="tree-chevron">⌄</span><span className="folder-icon">▰</span>{project.split(" · ")[0]}</div>
-            <div className="tree-branch"><span>◈</span> repo local</div>
-            <div className="tree-branch"><span>◌</span> worktree demo</div>
+            <div className="tree-branch"><span>◌</span> cwd configurado por entorno</div>
           </div>
           <nav className="nav-list">
             <div className="sidebar-heading section-heading"><span>VISTAS</span></div>
@@ -175,12 +172,12 @@ function App(): JSX.Element {
             <button className="add-tab" aria-label="Abrir vista">+</button>
           </div>
           <div className="content-scroll">
-            <div className="breadcrumb"><span>DrumCoach</span><span>/</span><strong>{selectedNavigation.section}</strong><span className="breadcrumb-spacer" /><span className="revision-label">revisión demo · r1</span></div>
+            <div className="breadcrumb"><span>{project.split(" · ")[0]}</span><span>/</span><strong>{selectedNavigation.section}</strong><span className="breadcrumb-spacer" /><span className="revision-label">OMP real · cwd activo</span></div>
             <section className="hero-section">
               <div>
-                <div className="eyebrow">PROYECTO DEMO · VISTA VIVA</div>
+                <div className="eyebrow">PROYECTO LOCAL · INSPECCIÓN REAL</div>
                 <h1>{selectedNavigation.section === "Resumen" ? "Tu producto, en contexto" : selectedNavigation.section}</h1>
-                <p>{selectedNavigation.detail}. Esta superficie es un shell funcional; los motores semánticos se conectarán en fases posteriores.</p>
+                <p>{selectedNavigation.detail}. El chat usa OMP real con el cwd del proyecto seleccionado.</p>
               </div>
               <button className="outline-button" onClick={() => setActiveTab("Resumen")}>Ver resumen</button>
             </section>
@@ -192,16 +189,16 @@ function App(): JSX.Element {
             </section>
             <section className="dashboard-grid">
               <article className="panel-card architecture-card">
-                <div className="card-heading"><div><div className="card-kicker">ARQUITECTURA · PROVISIONAL</div><h2>Mapa del sistema</h2></div><button className="more-button" aria-label="Más opciones">•••</button></div>
+                <div className="card-heading"><div><div className="card-kicker">ARQUITECTURA · INSPECCIÓN REAL</div><h2>Mapa del sistema</h2></div><button className="more-button" aria-label="Más opciones">•••</button></div>
                 <div className="system-map">
-                  <div className="map-node user-node"><span>◉</span><strong>Persona</strong><small>músico</small></div>
+                  <div className="map-node user-node"><span>◉</span><strong>Proyecto seleccionado</strong><small>cwd del OMP real</small></div>
                   <div className="map-line line-one" />
-                  <div className="map-node app-node"><span>✦</span><strong>DrumCoach</strong><small>aplicación local</small></div>
+                  <div className="map-node app-node"><span>✦</span><strong>OMP RPC</strong><small>análisis bajo demanda</small></div>
                   <div className="map-line line-two" />
-                  <div className="map-node service-node"><span>⌘</span><strong>Transcripción</strong><small>pipeline Python</small></div>
-                  <div className="map-badge">3 relaciones · r1</div>
+                  <div className="map-node service-node"><span>⌘</span><strong>Diagrama pendiente</strong><small>pide una revisión en el chat</small></div>
+                  <div className="map-badge">sin inventar componentes</div>
                 </div>
-                <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); }}>Abrir arquitectura <span>→</span></button>
+                <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); setChatInput("Revisa el proyecto seleccionado y devuelve hallazgos verificables y un diagrama Mermaid de su arquitectura."); }}>Pedir diagrama real <span>→</span></button>
               </article>
               <article className="panel-card activity-card">
                 <div className="card-heading"><div><div className="card-kicker">ACTIVIDAD</div><h2>Últimos hallazgos</h2></div><span className="live-badge"><span /> LIVE</span></div>
@@ -213,7 +210,7 @@ function App(): JSX.Element {
                 <button className="card-link" onClick={() => setSection("Evidencia")}>Ver timeline <span>→</span></button>
               </article>
             </section>
-            <section className="welcome-strip"><div className="welcome-icon">✦</div><div><strong>Empieza por preguntar algo sobre el proyecto</strong><span>El chat conserva el contexto de la vista seleccionada.</span></div><button className="suggestion" onClick={() => setChatInput("¿Qué componentes tiene este proyecto?")}>¿Qué componentes hay? <span>↗</span></button></section>
+            <section className="welcome-strip"><div className="welcome-icon">✦</div><div><strong>Empieza por preguntar algo sobre el proyecto</strong><span>El chat conserva el contexto de la vista seleccionada.</span></div><button className="suggestion" onClick={() => setChatInput("Revisa el proyecto seleccionado y genera un diagrama Mermaid basado sólo en el código real.")}>Revisar y diagramar <span>↗</span></button></section>
           </div>
         </main>
 

@@ -1,11 +1,13 @@
 import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
-const projectRoot = join(currentDirectory, "../../..");
-const adapterModuleUrl = pathToFileURL(join(projectRoot, "dist/packages/omp-bridge/src/omp-adapter.js")).href;
+const workspaceRoot = join(currentDirectory, "../../..");
+const projectRoot = resolve(process.env.PROJECTSTUDIO_PROJECT_ROOT ?? workspaceRoot);
+const projectName = basename(projectRoot);
+const adapterModuleUrl = pathToFileURL(join(workspaceRoot, "dist/packages/omp-bridge/src/omp-adapter.js")).href;
 
 type AdapterEvent = Record<string, unknown>;
 type ChatAdapter = {
@@ -28,7 +30,7 @@ let chatAdapter: ChatAdapter | undefined;
 let chatStart: Promise<void> | undefined;
 
 function adapterArguments(): { command: string; args: string[] } {
-  const sessionDirectory = join(projectRoot, ".tmp", "omp-sessions");
+  const sessionDirectory = join(workspaceRoot, ".tmp", "omp-sessions");
   mkdirSync(sessionDirectory, { recursive: true });
   return {
     command: process.env.OMP_BIN ?? "omp",
@@ -44,7 +46,7 @@ async function getChatAdapter(): Promise<ChatAdapter> {
   chatAdapter = new bridge.OmpAdapter({
     ...processArguments,
     cwd: projectRoot,
-    sessionKey: "project-demo/thread-main",
+    sessionKey: `${projectName}/thread-main`,
     hostTools: [{
       name: "studio_task_progress",
       description: "Registra progreso interno de una tarea de ProjectStudio.",
@@ -56,7 +58,7 @@ async function getChatAdapter(): Promise<ChatAdapter> {
   return chatAdapter;
 }
 
-async function startChat(): Promise<{ mode: string; status: string }> {
+async function startChat(): Promise<{ mode: string; status: string; projectName: string; projectRoot: string }> {
   const adapter = await getChatAdapter();
   if (!chatStart) {
     chatStart = adapter.start().catch((error: unknown) => {
@@ -65,7 +67,7 @@ async function startChat(): Promise<{ mode: string; status: string }> {
     });
   }
   await chatStart;
-  return { mode: "real", status: adapter.status };
+  return { mode: "real", status: adapter.status, projectName, projectRoot };
 }
 
 function installChatIpc(): void {
@@ -73,7 +75,7 @@ function installChatIpc(): void {
     try {
       return await startChat();
     } catch (error) {
-      return { mode: "real", status: "failed", error: error instanceof Error ? error.message : String(error) };
+      return { mode: "real", status: "failed", projectName, projectRoot, error: error instanceof Error ? error.message : String(error) };
     }
   });
   ipcMain.handle("studio:chat:send", async (_event, message: unknown) => {

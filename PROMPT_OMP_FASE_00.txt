@@ -1,0 +1,9 @@
+Estás en el repositorio git@github.com:micuentadecasa/projectstudio.git.
+Lee AGENTS.md y docs/PRD.md v3.0, especialmente §§21–27 y el gate de Fase 00.
+Inspecciona primero el estado real del repo, branch, dependencias y archivos.
+EJECUTA SOLO FASE 00: prepara entorno, contratos iniciales y spikes OMP RPC
++ LangGraph.js SQLite; documenta hallazgos reales y ADRs.
+Construye tests y evidencia; crea/actualiza docs/implementation/STATUS.md
+con F00-Txx, outputs verificables, bloqueos y checklist manual.
+No inicies fase 01. Al terminar, queda en WAITING_USER_APPROVAL y muéstrame
+los pasos exactos para verificarla.

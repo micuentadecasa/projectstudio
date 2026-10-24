@@ -18,7 +18,7 @@ declare global {
       runtime: string;
       omp: string;
       chat: {
-        start: () => Promise<{ mode: string; status: string; error?: string }>;
+        start: () => Promise<{ mode: string; status: string; projectName: string; projectRoot: string; error?: string }>;
         send: (message: string) => Promise<{ requestId: string; command: string; accepted: boolean }>;
         stop: () => Promise<void>;
         onEvent: (listener: (event: StudioChatEvent) => void) => () => void;

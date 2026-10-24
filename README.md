@@ -39,18 +39,24 @@ pnpm desktop
 
 El modo normal es OMP real. El panel debe mostrar `OMP · REAL`; una instalación sin login/modelo muestra el error de configuración en el chat.
 
+Para inspeccionar otro repositorio local, incluido DrumCoach cuando exista en esta máquina:
+
+```bash
+PROJECTSTUDIO_PROJECT_ROOT=/ruta/absoluta/al/proyecto pnpm desktop
+```
+
+El proceso OMP recibe esa ruta como `cwd`; las sesiones se guardan en `.tmp/omp-sessions` de ProjectStudio. El selector muestra el nombre real del repositorio y queda bloqueado para evitar fingir un cambio de cwd que no se ha ejecutado.
+
 ## Qué comprobar manualmente
 
 1. Cambia entre `Resumen`, `ProductShape`, `Arquitectura`, `Evidencia` y `Cambios`.
-2. Cambia el proyecto en el selector superior.
+2. Comprueba que el selector muestra el nombre del repositorio configurado por `PROJECTSTUDIO_PROJECT_ROOT`.
 3. Cambia entre tema oscuro y claro.
 4. Arrastra el borde del explorador izquierdo y del chat derecho.
-5. Escribe `¿Qué componentes tiene este proyecto?` en el chat y pulsa `Enviar`.
+5. Escribe `Revisa el proyecto seleccionado y genera un diagrama Mermaid basado sólo en el código real.` en el chat y pulsa `Enviar`.
 6. Comprueba que aparecen deltas parciales y una respuesta final del modelo configurado.
 7. Comprueba que el estado del chat termina en `settled`.
 8. Abre el menú `Ver` para probar Reload, DevTools y fullscreen.
-
-El selector `notes · brownfield pendiente` es sólo una etiqueta visual. El proyecto externo `notes` no se analiza ni modifica todavía.
 
 ## Ejecutar verificaciones
 

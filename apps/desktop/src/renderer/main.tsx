@@ -82,7 +82,12 @@ function displayChatStatus(status: string): string {
   if (status === "starting" || status === "submitting") return "iniciando";
   return "trabajando";
 }
-
+function humanizeError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/ENOENT|spawn .*omp|omp.*not found/i.test(message)) return "No se pudo conectar con OMP. Comprueba que `omp` está instalado, autenticado y disponible en PATH.";
+  if (/login|auth|credential|model/i.test(message)) return "OMP necesita autenticación y un modelo configurado. Ejecuta `omp login` y vuelve a intentarlo.";
+  return message;
+}
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -118,7 +123,7 @@ function App(): JSX.Element {
     setChatMode(result.mode);
     setChatStatus(result.status);
     setProject(`${result.projectName} · cwd configurado`);
-    if (result.error) setChatError(result.error);
+    if (result.error) setChatError(humanizeError(result.error));
     const bootstrap = await window.studio.project.bootstrap({ resume: false });
     if (bootstrap.status === "running") {
       setSending(true);
@@ -162,7 +167,7 @@ function App(): JSX.Element {
           window.setTimeout(() => void sendMessage(nextObjective.prompt, nextObjective.workflow), 0);
         }
       } else if (event.type === "warning" || event.type === "error") {
-        setChatError(event.message);
+        setChatError(humanizeError(event.message));
         setActivity("No se pudo completar la tarea");
         setChatStatus("failed");
         setSending(false);
@@ -170,7 +175,7 @@ function App(): JSX.Element {
     });
     void reloadProjectSurface().catch((error: unknown) => {
       setChatStatus("failed");
-      setChatError(error instanceof Error ? error.message : String(error));
+      setChatError(humanizeError(error));
       setBootstrapFailed(true);
       setActivity("No se pudo cargar el proyecto");
     });
@@ -199,7 +204,7 @@ function App(): JSX.Element {
     } catch (error) {
       setBootstrapFailed(true);
       setSending(false);
-      setChatError(error instanceof Error ? error.message : String(error));
+      setChatError(humanizeError(error));
       setActivity("No se pudo reanudar el descubrimiento");
     }
   }
@@ -216,7 +221,7 @@ function App(): JSX.Element {
       await window.studio.command.submit({ workflow: requestedWorkflow ?? workflowForSection(section), prompt: text });
     } catch (error) {
       setSending(false);
-      setChatError(error instanceof Error ? error.message : String(error));
+      setChatError(humanizeError(error));
       setChatStatus("failed");
       setActivity("No se pudo iniciar la tarea");
     }
@@ -342,6 +347,16 @@ function App(): JSX.Element {
           </div>
           <div className="content-scroll">
             <div className="breadcrumb"><span>{project.split(" · ")[0]}</span><span>/</span><strong>{selectedNavigation.section}</strong><span className="breadcrumb-spacer" /><span className="revision-label">OMP real · cwd activo</span></div>
+            <section className="welcome-strip">
+              <div className="welcome-icon">✦</div>
+              <div>
+                <strong>{sending ? "Descubrimiento en curso" : "Siguiente paso recomendado"}</strong>
+                <span>{activity}. Puedes revisar evidencias mientras el workflow continúa.</span>
+              </div>
+              {bootstrapFailed
+                ? <button className="outline-button" onClick={() => void continueDiscovery()}>Continuar análisis</button>
+                : <span className="suggestion-note">El Arquitecto de Proyecto te propone objetivos en el chat.</span>}
+            </section>
             <section className="hero-section">
               <div>
                 <div className="eyebrow">PROYECTO LOCAL · INSPECCIÓN REAL</div>
@@ -382,16 +397,6 @@ function App(): JSX.Element {
                 </div>
                 <button className="card-link" onClick={() => setSection("Evidencia")}>Ver timeline <span>→</span></button>
               </article>
-            </section>
-            <section className="welcome-strip">
-              <div className="welcome-icon">✦</div>
-              <div>
-                <strong>{sending ? "Descubrimiento en curso" : "Siguiente paso recomendado"}</strong>
-                <span>{activity}. Puedes revisar evidencias mientras el workflow continúa.</span>
-              </div>
-              {bootstrapFailed
-                ? <button className="outline-button" onClick={() => void continueDiscovery()}>Continuar análisis</button>
-                : <span className="suggestion-note">El Arquitecto de Proyecto te propone objetivos en el chat.</span>}
             </section>
           </div>
         </main>

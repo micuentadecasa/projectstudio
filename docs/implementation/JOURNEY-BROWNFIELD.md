@@ -21,7 +21,7 @@ Terminar con:
 | 1. Abrir | Ejecuta ProjectStudio con un repo local | Lista de proyectos, nombre, cwd y señales detectadas | Registro local + filesystem | El proyecto activo es inequívoco |
 | 2. Reconocer | Mira `ProductShape detectado` y `Arquitectura detectada` | Señales de carpetas reales, no afirmaciones del agente | Detector determinista | Decide si el proyecto tiene documentación reutilizable |
 | 3. Orientarse | Lee el saludo del `Arquitecto de Proyecto` | Personalidad, límites y dos objetivos: entender producto o documentar arquitectura | UI + prompt de personalidad del workflow | Puede empezar sin inventar una pregunta |
-| 4. Descubrir | Pulsa **Entender el proyecto** | Progreso resumido; no prompts, RPC frames ni razonamiento interno | `brownfield-discovery` → LangGraph → OMP real | El objetivo se ejecuta o queda en cola si el bootstrap sigue activo |
+| 4. Descubrir | Pulsa **Entender el proyecto** | Estado y progreso arriba del contenido; actividad resumida en el chat; no prompts, RPC frames ni razonamiento interno | `brownfield-discovery` → LangGraph → OMP real | El objetivo se ejecuta o queda en cola si el bootstrap sigue activo |
 | 5. Ver evidencia | Navega mientras el agente trabaja | Actividad, respuesta final y diagrama con rutas/evidencia | Eventos normalizados + artefacto guardado | Puede distinguir observado de inferido |
 | 6. Documentar | Pulsa **Documentar arquitectura** cuando el baseline esté disponible | Arquitectura existente, no una propuesta cloud prematura | `architecture-documentation` | Existe una vista que el equipo puede revisar |
 | 7. Preguntar | Escribe una pregunta concreta en el composer derecho | Respuesta contextual al proyecto activo | Mismo CommandBus/workflow, no canal directo | La respuesta conserva el contexto del proyecto |
@@ -38,7 +38,7 @@ Terminar con:
 
 ## Verificación automatizada asociada
 
-- `pnpm test:e2e:journey`: arranque con discovery interrumpido; la UI muestra `Continuar análisis` en vez de dejar objetivos bloqueados indefinidamente.
+- `pnpm test:e2e:journey:scenarios`: proyecto existente, referencia nueva, discovery activo con objetivo encolado, error OMP y cambio de contexto.
 - `pnpm test:f04`: pasos 3–7 con OMP real; hace clic en **Entender el proyecto**, verifica respuesta final y ausencia de prompt interno.
 - `pnpm test:e2e:notes:diagram`: pasos 1–2 y 5 con el artefacto Mermaid almacenado; `tokensUsed: false`.
 - `pnpm test:e2e:projects`: paso 8; archiva la referencia y verifica que la ruta sigue existiendo.

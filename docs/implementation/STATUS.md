@@ -121,6 +121,8 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T11 | done | personalidad visible del Arquitecto de Proyecto, objetivos sugeridos dentro del chat y composer visible |
 | F05-T12 | done | `docs/implementation/JOURNEY-BROWNFIELD.md`: journey brownfield, reglas de orden y smoke asociado |
 | F05-T13 | done | discovery interrumpido se marca reanudable; no deja objetivos bloqueados por un marcador stale |
+| F05-T14 | done | escenarios humanos: proyecto existente, referencia nueva, discovery activo, cola de objetivo y error OMP comprensible |
+| F05-T15 | done | estado/progreso de ProductShape subido encima del contenido principal |
 ### Verificación F05
 
 ```bash
@@ -138,6 +140,16 @@ pnpm test:e2e:notes:diagram
 ```
 
 El smoke test abre Notes, selecciona ProductShape, comprueba `.generated-system-map .diagram-canvas` con `MuScriptor` y `SQLite`, y guarda `F05-T06-notes-stored-diagram.png` y `.md`.
+
+Journey humano completo, sin mostrar prompts internos:
+
+```bash
+pnpm test:e2e:journey:scenarios
+```
+
+Resultado observado: `existing-notes`, `new-project-reference`, `active-discovery-queues-objective` y `omp-error` pasan. El caso OMP ausente muestra una instrucción accionable y no expone `ENOENT`.
+
+La captura `F05-T06-notes-stored-diagram.png` confirma que el estado `Siguiente paso recomendado` aparece inmediatamente bajo el breadcrumb de `ProductShape`, antes del hero, métricas y diagrama.
 
 Para iterar el renderer sin consumir otra respuesta OMP:
 ```bash

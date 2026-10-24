@@ -6,6 +6,9 @@ import { visibleTextDelta } from "./chat-events.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
 type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; live?: boolean };
+type PdacPage = "overview" | "use-cases" | "actors" | "rules" | "contexts";
+type PdacFocus = "all" | "use-cases" | "actors" | "rules" | "contexts";
+const pdacPageLabels: Record<PdacPage, string> = { overview: "ProductShape", "use-cases": "Casos de uso", actors: "Actores", rules: "Reglas y restricciones", contexts: "Bounded contexts" };
 
 function extractAssistantFindings(text: string): AssistantFinding[] {
   const withoutDiagram = text.replace(/```[\s\S]*?```/g, "");
@@ -140,6 +143,8 @@ function App(): JSX.Element {
   const [diagramRevisions, setDiagramRevisions] = useState<DiagramRevision[]>([]);
   const [selectedDiagramRevisionId, setSelectedDiagramRevisionId] = useState<string | null>(null);
   const [assistantFindings, setAssistantFindings] = useState<AssistantFinding[]>([]);
+  const [pdacFocus, setPdacFocus] = useState<PdacFocus>("all");
+  const [pdacPage, setPdacPage] = useState<PdacPage>("overview");
   const [activeTab, setActiveTab] = useState("Resumen");
   const [chatMode, setChatMode] = useState("real");
   const [chatStatus, setChatStatus] = useState("starting");
@@ -264,6 +269,38 @@ function App(): JSX.Element {
     [diagramRevisions, selectedDiagramRevisionId],
   );
   const latestDiagram = selectedDiagramRevision?.source ?? [...messages].reverse().map((message) => extractMermaid(message.text)).find((source): source is string => Boolean(source)) ?? storedDiagram;
+  const pdacSignals = useMemo(() => {
+    const text = assistantFindings.map((finding) => `${finding.title} ${finding.detail}`).join(" ").toLowerCase();
+    return [
+      { id: "purpose", label: "Propósito", state: /propósito|frontera|producto/.test(text) ? "found" : "pending" },
+      { id: "actors", label: "Actores", state: /actor|aprendiz|operador/.test(text) ? "found" : "pending" },
+      { id: "use-cases", label: "Casos de uso", state: /caso de uso|importar material|practicar|explorar biblioteca/.test(text) ? "found" : "pending" },
+      { id: "rules", label: "Reglas y restricciones", state: /regla|restric|invariant|local-first/.test(text) ? "found" : "pending" },
+      { id: "contexts", label: "Bounded contexts", state: /bounded context|contexto delimitado|instrument-specific|practice material/.test(text) ? "found" : "pending" },
+    ] as const;
+  }, [assistantFindings]);
+  const visibleFindings = useMemo(() => {
+    if (pdacFocus === "all") return assistantFindings;
+    const patterns: Record<Exclude<PdacFocus, "all">, RegExp> = {
+      "use-cases": /caso de uso|importar material|practicar|explorar biblioteca/i,
+      actors: /actor|aprendiz|operador/i,
+      rules: /regla|restric|invariant|local-first/i,
+      contexts: /bounded context|contexto delimitado|instrument-specific|practice material/i,
+    };
+    const pattern = patterns[pdacFocus];
+    return assistantFindings.filter((finding) => pattern.test(`${finding.title} ${finding.detail}`));
+  }, [assistantFindings, pdacFocus]);
+  const pdacState = sending ? "Exploración en curso" : assistantFindings.length > 0 ? "Borrador PDAC provisional" : "Sin evidencia publicada";
+  const pdacStateDetail = sending
+    ? "El asistente está contrastando ProductShape con el código y publicará cambios parciales."
+    : assistantFindings.length > 0
+      ? "La vista resume evidencia encontrada; todavía no es el modelo canónico aprobado."
+      : "Inicia una revisión para construir el primer estado PDAC con evidencia.";
+  function openPdacPage(target: string): void {
+    const page = (target in pdacPageLabels ? target : "overview") as PdacPage;
+    setPdacPage(page);
+    setPdacFocus(page === "overview" ? "all" : page);
+  }
   function workflowForSection(currentSection: Section): "brownfield-discovery" | "architecture-documentation" | "architecture-planning" {
     return currentSection === "ProductShape" ? "brownfield-discovery" : "architecture-documentation";
   }
@@ -318,6 +355,8 @@ function App(): JSX.Element {
     if (!id || id === activeProjectId) return;
     await window.studio.projects.activate(id);
     setMessages(initialMessages);
+    setPdacPage("overview");
+    setPdacFocus("all");
     await reloadProjectSurface();
   }
 
@@ -325,6 +364,8 @@ function App(): JSX.Element {
     if (!activeProjectId) return;
     await window.studio.projects.archive(activeProjectId);
     setMessages(initialMessages);
+    setPdacPage("overview");
+    setPdacFocus("all");
     await reloadProjectSurface();
   }
 
@@ -421,7 +462,7 @@ function App(): JSX.Element {
             <button className="add-tab" aria-label="Abrir vista">+</button>
           </div>
           <div className="content-scroll">
-            <div className="breadcrumb"><span>{project.split(" · ")[0]}</span><span>/</span><strong>{selectedNavigation.section}</strong><span className="breadcrumb-spacer" /><span className="revision-label">OMP real · cwd activo</span></div>
+            <div className="breadcrumb"><span>{project.split(" · ")[0]}</span><span>/</span><strong>{section === "ProductShape" ? pdacPageLabels[pdacPage] : selectedNavigation.section}</strong><span className="breadcrumb-spacer" /><span className="revision-label">OMP real · cwd activo</span></div>
             <section className="welcome-strip">
               <div className="welcome-icon">✦</div>
               <div>
@@ -435,13 +476,45 @@ function App(): JSX.Element {
             <section className="hero-section">
               <div>
                 <div className="eyebrow">PROYECTO LOCAL · INSPECCIÓN REAL</div>
-                <h1>{selectedNavigation.section === "Resumen" ? "Tu producto, en contexto" : selectedNavigation.section}</h1>
-                <p>{selectedNavigation.detail}. El chat usa OMP real con el cwd del proyecto seleccionado.</p>
+                <h1>{section === "ProductShape" ? pdacPageLabels[pdacPage] : selectedNavigation.section === "Resumen" ? "Tu producto, en contexto" : selectedNavigation.section}</h1>
+                <p>{section === "ProductShape" && pdacPage !== "overview" ? `Vista de entidad PDAC · ${pdacPageLabels[pdacPage]}. La información se actualiza con los hallazgos del asistente.` : `${selectedNavigation.detail}. El chat usa OMP real con el cwd del proyecto seleccionado.`}</p>
               </div>
               {section === "ProductShape" || section === "Arquitectura"
                 ? <button className="outline-button primary-review" onClick={() => void sendMessage(reviewPrompt(section))}>{section === "ProductShape" ? "Revisar y diagramar" : "Revisar arquitectura"}</button>
                 : <button className="outline-button" onClick={() => setActiveTab("Resumen")}>Ver resumen</button>}
             </section>
+            {section === "ProductShape" ? (
+              <section className="pdac-workbench">
+                <article className="panel-card pdac-state-card">
+                  <div className="pdac-state-header">
+                    <div>
+                      <div className="card-kicker">PDAC · ESTADO ACTUAL</div>
+                      <h2>{pdacState}</h2>
+                      <p>{pdacStateDetail}</p>
+                    </div>
+                    <span className={`pdac-state-badge ${sending ? "working" : assistantFindings.length > 0 ? "draft" : "empty"}`}>{sending ? "TRABAJANDO" : assistantFindings.length > 0 ? "PROVISIONAL" : "PENDIENTE"}</span>
+                  </div>
+                  <div className="pdac-state-summary"><strong>{pdacSignals.filter((signal) => signal.state === "found").length}/{pdacSignals.length}</strong><span>áreas PDAC con evidencia visible</span><span className="pdac-summary-separator">·</span><span>{diagramRevisions.length > 0 ? `${diagramRevisions.length} revisión${diagramRevisions.length === 1 ? "" : "es"} de mapa` : "sin mapa publicado"}</span></div>
+                  <div className="pdac-signal-list" aria-label="Áreas del estado PDAC">
+                    {pdacSignals.map((signal) => <button className={`pdac-signal ${signal.state} ${pdacFocus === signal.id ? "selected" : ""}`} key={signal.id} onClick={() => openPdacPage(signal.id)} aria-pressed={pdacPage === signal.id}><span className="pdac-signal-dot" /><strong>{signal.label}</strong><small>{signal.state === "found" ? "ver página" : "pendiente"}</small></button>)}
+                  </div>
+                </article>
+                {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">ENTIDAD PDAC</div><h2>{pdacPageLabels[pdacPage]}</h2><p>Esta página reúne sólo la evidencia disponible para esta entidad. El asistente seguirá completándola sin inventar datos.</p></div><button className="outline-button" onClick={() => openPdacPage("overview")}>← Volver al estado</button></article>}
+                <article className="panel-card pdac-diagram-card">
+                  <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"}</div><h2>{latestDiagram ? "Relaciones encontradas" : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
+                  {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones del mapa PDAC">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
+                  {latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
+                  <button className="card-link" onClick={() => void sendMessage(reviewPrompt("ProductShape"))}>{sending ? "Actualizando mapa…" : "Actualizar mapa con OMP"} <span>→</span></button>
+                </article>
+                <article className="panel-card pdac-details-card">
+                  <div className="card-heading"><div><div className="card-kicker">DETALLE DINÁMICO</div><h2>{pdacPage === "overview" ? "Lo que va encontrando" : pdacPageLabels[pdacPage]}</h2></div><button className="pdac-clear-focus" onClick={() => openPdacPage("overview")}>Ver estado</button></div>
+                  <div className="pdac-detail-list" aria-live="polite">
+                    {visibleFindings.length > 0 ? visibleFindings.slice(0, 8).map((finding, index) => <div className={`pdac-detail-row ${finding.live ? "live" : ""}`} key={finding.id}><span className="pdac-detail-index">{String(index + 1).padStart(2, "0")}</span><div><strong>{finding.title}</strong>{finding.live && <span className="pdac-new-badge">NUEVO</span>}<small>{finding.detail}{finding.evidence ? ` · ${finding.evidence}` : ""}</small></div></div>) : <div className="assistant-empty"><strong>{sending ? "Esperando el siguiente hallazgo…" : "Esta área todavía no tiene evidencia."}</strong><small>El asistente la completará cuando encuentre información verificable en el proyecto.</small></div>}
+                  </div>
+                </article>
+              </section>
+            ) : (
+              <>
             <section className="metric-grid" aria-label="Resumen del proyecto">
               <article className="metric-card accent-card"><div className="metric-label">CASOS DE USO</div><div className="metric-value">08</div><div className="metric-note positive">↑ 2 esta semana</div></article>
               <article className="metric-card"><div className="metric-label">COMPONENTES C4</div><div className="metric-value">14</div><div className="metric-note">3 con evidencia nueva</div></article>
@@ -472,6 +545,8 @@ function App(): JSX.Element {
                 <button className="card-link" onClick={() => setSection("Evidencia")}>Ver evidencia del análisis <span>→</span></button>
               </article>
             </section>
+              </>
+            )}
           </div>
         </main>
 

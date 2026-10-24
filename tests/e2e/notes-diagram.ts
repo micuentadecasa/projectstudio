@@ -22,8 +22,15 @@ try {
   await window.getByTitle("Producto y casos de uso").click();
   await window.getByRole("heading", { name: "ProductShape" }).waitFor();
   await window.getByRole("heading", { name: "Lo que va encontrando" }).waitFor();
-  if (await window.locator(".assistant-findings .activity-row").count() === 0) throw new Error("Stored ProductShape report did not produce assistant findings");
-  await window.getByText("EVIDENCIA GUARDADA").waitFor();
+  if (await window.locator(".pdac-detail-row").count() === 0) throw new Error("Stored ProductShape report did not produce dynamic PDAC details");
+  await window.getByRole("button", { name: /Casos de uso/ }).click();
+  await window.getByRole("heading", { level: 1, name: "Casos de uso" }).waitFor();
+  await window.getByText("ENTIDAD PDAC", { exact: true }).waitFor();
+  await window.getByRole("button", { name: /Actores/ }).click();
+  await window.getByRole("heading", { level: 1, name: "Actores" }).waitFor();
+  await window.getByRole("button", { name: "← Volver al estado" }).click();
+  await window.getByRole("heading", { name: "Borrador PDAC provisional" }).waitFor();
+  await window.getByText("MAPA PDAC · EVIDENCIA", { exact: true }).waitFor();
   await window.locator(".generated-system-map .diagram-canvas").waitFor({ timeout: 30_000 });
   const source = await window.locator(".generated-system-map .diagram-canvas").innerText();
   if (!source.includes("MuScriptor") || !source.includes("SQLite")) throw new Error(`Stored ProductShape diagram is incomplete: ${source}`);

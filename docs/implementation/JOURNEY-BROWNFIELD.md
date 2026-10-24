@@ -36,7 +36,10 @@ El usuario no opera el CLI ni debe leer el repositorio entero. Su recorrido es:
 3. Lee **Lo que va encontrando**: propósito, actores, casos de uso, restricciones y rutas de evidencia. Cada tarjeta es un resumen de una salida real de OMP, no una actividad decorativa.
 4. Cuando el stream identifica una sección de casos de uso, la interfaz anuncia **Nuevo caso de uso** y añade el hallazgo al timeline vivo.
 5. Mira el mapa provisional, que puede aparecer antes de que termine el mensaje si el bloque Mermaid ya está disponible. El canvas ocupa el área principal y conserva revisiones anteriores.
-6. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.
+6. Pulsa **Casos de uso**, **Actores**, **Reglas y restricciones** o **Bounded contexts** para abrir la página de esa entidad desde el estado PDAC.
+7. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.
+
+Cada página de entidad filtra la evidencia disponible y conserva el contexto del mapa. El usuario puede volver al estado PDAC sin perder la revisión seleccionada.
 
 Durante el análisis, la aplicación muestra la etapa y permite seguir navegando. El timeline entra con una transición breve y mantiene un pulso mientras OMP trabaja; no genera una revisión por cada token ni sustituye un modelo aceptado.
 

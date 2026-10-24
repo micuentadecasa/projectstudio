@@ -127,6 +127,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T17 | done | diagramas almacenados se distinguen de revisiones `provisional`; el usuario puede volver a una revisión temporal |
 | F05-T18 | done | Mermaid se publica desde el streaming antes de cerrar el fence; el fallback comunica cuándo aún no hay diagrama |
 | F05-T19 | done | panel ProductShape reordenado como timeline vivo; diagrama ocupa el ancho principal y anuncia casos de uso nuevos durante streaming |
+| F05-T20 | done | botones del estado PDAC abren páginas de Casos de uso, Actores, Reglas y Bounded contexts y conservan el mapa |
 ### Verificación F05
 
 ```bash
@@ -146,6 +147,8 @@ pnpm test:e2e:notes:diagram
 ```
 
 El smoke test abre Notes, selecciona ProductShape, comprueba `.generated-system-map .diagram-canvas` con `MuScriptor` y `SQLite`, y guarda `F05-T06-notes-stored-diagram.png` y `.md`.
+El mismo smoke navega a las páginas `Casos de uso` y `Actores`, comprueba el banner `ENTIDAD PDAC`, vuelve al estado y confirma que el mapa sigue disponible.
+
 
 Journey humano completo, sin mostrar prompts internos:
 

@@ -10,7 +10,7 @@ branch: main
 gate: F05-BROWNFIELD-WORKBENCH
 userDecision: APPROVED
 nextPhase: '05'
-latestVerifiedCommit: 35735b0
+latestVerifiedCommit: 892a97d
 manualVerification: required
 ```
 El flujo brownfield combina workbench, registro local de proyectos, workflows LangGraph y OMP real. Esta iteración queda lista para revisión manual; no se hizo push.

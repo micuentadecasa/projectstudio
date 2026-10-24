@@ -5,12 +5,12 @@
 ```yaml
 phase: '05'
 state: IN_PROGRESS
-baselineCommit: 43341b9
+baselineCommit: 18d4333
 branch: main
 gate: F05-NOTES-BROWNFIELD
 userDecision: APPROVED
 nextPhase: '05'
-latestVerifiedCommit: 43341b9
+latestVerifiedCommit: 18d4333
 ```
 
 El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementada y verificada contra el proceso OMP real; Fase 05 inicia la inspección brownfield de `/Users/luis/projects/notes`.

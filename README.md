@@ -132,6 +132,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 ## Documentación de implementación
 
 - Estado actual: `docs/implementation/STATUS.md`
+- Journey brownfield: `docs/implementation/JOURNEY-BROWNFIELD.md`
 - Evidencia Fase 03: `docs/implementation/phase-03-evidence.md`
 - Evidencia Fase 04: `docs/implementation/phase-04-evidence.md`
 - Checklist de gates: `docs/implementation/PHASE-GATES.md`

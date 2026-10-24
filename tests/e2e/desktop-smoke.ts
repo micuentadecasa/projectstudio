@@ -29,10 +29,10 @@ try {
   await window.getByTitle("C4 y escenarios").click();
   await window.getByRole("heading", { name: "Arquitectura" }).waitFor();
   const initialAssistantMessages = await window.locator(".message-row.omp").count();
-  await window.getByLabel("Mensaje para OMP").fill("Confirma brevemente que el proyecto está disponible y no uses herramientas.");
-  await window.getByRole("button", { name: "Enviar mensaje" }).click();
+  await window.getByRole("button", { name: "Entender el proyecto" }).click();
+  if (await window.locator(".message-row.user").count() < 1) throw new Error("objective click did not create a user command");
   try {
-    await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, initialAssistantMessages, { timeout: 30_000 });
+    await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, initialAssistantMessages, { timeout: 120_000 });
   } catch (error) {
     throw new Error(`No final assistant message: ${JSON.stringify({ error: String(error), activity: await window.locator(".chat-activity").innerText(), chatError: await window.locator(".chat-error").innerText().catch(() => ""), messages: await window.locator(".message-row").allInnerTexts() })}`);
   }

@@ -14,7 +14,7 @@ const navigation: Array<{ section: Section; icon: string; detail: string }> = [
 ];
 
 const initialMessages: Message[] = [
-  { author: "omp", text: "Soy tu Arquitecto de Proyecto. Ya tengo este repositorio en contexto. Te propongo empezar por entender el producto, documentar la arquitectura existente o comparar una evolución local con AWS. Elige una opción o escríbeme una pregunta." },
+  { author: "omp", text: "Soy tu Arquitecto de Proyecto. Ya tengo este repositorio en contexto. Te propongo empezar por entender el producto o documentar la arquitectura existente. Primero construimos una base con evidencia; después podremos plantear cambios con criterio. Elige una opción o escríbeme una pregunta." },
 ];
 
 function reviewPrompt(section: Section): string {
@@ -100,6 +100,7 @@ function App(): JSX.Element {
   const [bootstrapFailed, setBootstrapFailed] = useState(false);
   const streamingDraft = useRef("");
   const [sending, setSending] = useState(false);
+  const queuedObjective = useRef<{ prompt: string; workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning" } | null>(null);
 
   async function reloadProjectSurface(): Promise<void> {
     setChatError("");
@@ -155,6 +156,11 @@ function App(): JSX.Element {
         setChatStatus("settled");
         setActivity("Listo para continuar");
         setSending(false);
+        const nextObjective = queuedObjective.current;
+        if (nextObjective) {
+          queuedObjective.current = null;
+          window.setTimeout(() => void sendMessage(nextObjective.prompt, nextObjective.workflow), 0);
+        }
       } else if (event.type === "warning" || event.type === "error") {
         setChatError(event.message);
         setActivity("No se pudo completar la tarea");
@@ -214,6 +220,14 @@ function App(): JSX.Element {
       setChatStatus("failed");
       setActivity("No se pudo iniciar la tarea");
     }
+  }
+  function chooseObjective(prompt: string, workflow: "brownfield-discovery" | "architecture-documentation"): void {
+    if (sending) {
+      queuedObjective.current = { prompt, workflow };
+      setActivity("Objetivo preparado; comenzará cuando termine el análisis actual…");
+      return;
+    }
+    void sendMessage(prompt, workflow);
   }
   async function openProject(): Promise<void> {
     const result = await window.studio.projects.open();
@@ -392,9 +406,8 @@ function App(): JSX.Element {
           <div className="chat-suggestions" aria-label="Objetivos sugeridos">
             <div className="chat-suggestions-label">Te sugiero empezar por</div>
             <div className="chat-suggestions-grid">
-              <button onClick={() => void sendMessage("Analiza este proyecto como brownfield: empieza por docs/product y después contrasta con el código. Devuelve hechos, inferencias, incógnitas y un diagrama confirmado.", "brownfield-discovery")} disabled={sending}>Entender el proyecto</button>
-              <button onClick={() => void sendMessage("Documenta la arquitectura existente a partir de ProductShape, src/ y tests.", "architecture-documentation")} disabled={sending}>Documentar arquitectura</button>
-              <button onClick={() => void sendMessage("Propón una variante local y otra AWS para este producto, con trade-offs y riesgos.", "architecture-planning")} disabled={sending}>Comparar local / AWS</button>
+              <button onClick={() => chooseObjective("Analiza este proyecto como brownfield: empieza por docs/product y después contrasta con el código. Devuelve hechos, inferencias, incógnitas y un diagrama confirmado.", "brownfield-discovery")}>Entender el proyecto</button>
+              <button onClick={() => chooseObjective("Documenta la arquitectura existente a partir de ProductShape, src/ y tests.", "architecture-documentation")}>Documentar arquitectura</button>
             </div>
           </div>
           {chatError && <div className="chat-error" role="alert">{chatError}</div>}

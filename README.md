@@ -88,7 +88,7 @@ Los artefactos del proyecto analizado no se borran ni se escriben durante esta g
 10. Comprueba progreso resumido, respuesta final del workflow y estado `settled`.
 11. Cambia entre tema oscuro y claro; arrastra los bordes del explorador y chat.
 12. Si OMP devuelve Mermaid, comprueba el mapa visual en chat y canvas central.
-13. En el chat inicial confirma que aparece la personalidad `Arquitecto de Proyecto` y los objetivos `Entender el proyecto`, `Documentar arquitectura` y `Comparar local / AWS`.
+13. En el chat inicial confirma que aparece la personalidad `Arquitecto de Proyecto` y los objetivos `Entender el proyecto` y `Documentar arquitectura`.
 14. Pulsa uno de esos objetivos o escribe una pregunta nueva en el composer visible del panel derecho.
 ## Cómo se ejecutan las peticiones
 

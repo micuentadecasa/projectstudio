@@ -74,13 +74,15 @@ Después deja un modelo seleccionado/configurado en OMP y ejecuta:
 pnpm desktop
 ```
 
-El modo normal inicia `omp --mode rpc` usando la configuración global del usuario, cwd del proyecto y session directory de ProjectStudio.
+El modo normal inicia `omp --mode rpc` usando la configuración global del usuario, el cwd del proyecto y el session directory de ProjectStudio.
 
-Se puede seleccionar otro binario real con:
+Para inspeccionar otro repositorio local:
 
 ```bash
-OMP_BIN=/ruta/a/omp pnpm desktop
+PROJECTSTUDIO_PROJECT_ROOT=/ruta/absoluta/al/proyecto pnpm desktop
 ```
+
+El selector muestra el nombre real del repositorio configurado. En esta máquina no existe actualmente una ruta local `drumcoach`; por eso el diagrama de DrumCoach todavía está bloqueado por entrada, no por OMP.
 
 Se puede seleccionar otro binario real con:
 

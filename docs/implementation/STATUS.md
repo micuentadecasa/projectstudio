@@ -9,7 +9,7 @@ baselineCommit: 8d96bc2
 branch: main
 gate: GATE-04
 userDecision: APPROVED
-nextPhase: '05'
+latestVerifiedCommit: eea9ba6
 ```
 
 El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementada y verificada contra el proceso OMP real; las verificaciones no usan emulador.

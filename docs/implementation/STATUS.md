@@ -10,7 +10,7 @@ branch: main
 gate: F05-NOTES-BROWNFIELD
 userDecision: APPROVED
 nextPhase: '05'
-latestVerifiedCommit: d899dee
+latestVerifiedCommit: a3aec23
 ```
 
 El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementada y verificada contra el proceso OMP real; Fase 05 inicia la inspección brownfield de `/Users/luis/projects/notes`.

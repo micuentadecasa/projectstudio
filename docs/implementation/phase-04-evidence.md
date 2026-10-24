@@ -22,8 +22,9 @@ React renderer
 | F04-T01 | done | `apps/desktop/src/main.ts`, `apps/desktop/preload.cjs` | IPC aislado y sesión OMP por proceso |
 | F04-T02 | done | `apps/desktop/src/renderer/main.tsx` | streaming, respuesta final, estado y errores visibles |
 | F04-T03 | done | `apps/desktop/src/renderer/renderer.d.ts` | eventos tipados en el renderer |
-| F04-T04 | done | `tests/e2e/desktop-smoke.ts` | mensaje real enviado y `OMP_REAL_OK` recibido |
+| F04-T04 | done | `tests/e2e/desktop-smoke.ts` | mensaje real enviado, respuesta OMP real y estado `settled` |
 | F04-T05 | done | capturas PNG | dark/light y respuesta real visible |
+| F04-T06 | done | `apps/desktop/src/main.ts`, README | `PROJECTSTUDIO_PROJECT_ROOT` fija cwd y nombre del repositorio |
 
 ## Comando reproducible
 

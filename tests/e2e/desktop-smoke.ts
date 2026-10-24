@@ -28,7 +28,8 @@ try {
   await window.getByRole("heading", { name: "Arquitectura" }).waitFor();
   await window.getByLabel("Mensaje para OMP").fill("Responde exclusivamente con OMP_REAL_OK y no uses herramientas.");
   await window.getByRole("button", { name: "Enviar mensaje" }).click();
-  await window.getByText("OMP_REAL_OK").waitFor({ timeout: 120_000 });
+  await window.locator(".message-row.omp").filter({ hasText: "OMP_REAL_OK" }).waitFor({ timeout: 120_000 });
+  await window.waitForFunction(() => document.querySelector(".chat-footer")?.textContent?.includes("settled"), undefined, { timeout: 120_000 });
   await window.screenshot({ path: resolve(evidenceDirectory, "F04-T03-desktop-chat-real.png"), fullPage: true });
 
   const result = {

@@ -23,7 +23,7 @@ El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementad
 | F04-T03 | done | tipos/estilos | `renderer.d.ts`, `styles.css` |
 | F04-T04 | done | integración | renderer → IPC → OmpAdapter → RPC → renderer |
 | F04-T05 | done | evidencia | `F04-T01-desktop-chat-*.png`, `F04-T03-desktop-chat-real.png` |
-
+| F04-T06 | done | selección de repo | `PROJECTSTUDIO_PROJECT_ROOT` controla el cwd real de OMP |
 ## Flujo funcionando
 
 ```text

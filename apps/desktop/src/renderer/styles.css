@@ -20,6 +20,8 @@ button { cursor: pointer; }
 .project-picker { display: flex; flex-direction: column; gap: 4px; min-width: 230px; color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
 .project-picker select { border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; letter-spacing: 0; cursor: pointer; }
 .project-picker option { color: #172236; }
+.project-actions { display: flex; align-items: center; gap: 2px; }
+.project-actions .quiet-button { width: 25px; height: 25px; border: 1px solid var(--line); border-radius: 6px; }
 .topbar-context { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
 .status-dot, .safe-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px #65d5a220; }
 .context-divider { width: 1px; height: 18px; background: var(--line); margin: 0 5px; }
@@ -38,6 +40,17 @@ button { cursor: pointer; }
 .folder-icon { color: #dfb461; }
 .tree-branch { padding-left: 30px; color: var(--muted); }
 .tree-branch span { color: var(--accent); }
+.tree-signals { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px 0 30px; }
+.tree-signals span { padding: 3px 5px; border-radius: 4px; color: var(--accent); background: var(--accent-soft); font-size: 8px; }
+.project-manager { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.project-manager-heading { padding-top: 13px; padding-bottom: 6px; }
+.project-list { padding: 0 10px; max-height: 126px; overflow: auto; }
+.project-row { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 29px; padding: 5px 7px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; text-align: left; font-size: 10px; }
+.project-row:hover, .project-row.active { color: var(--text); background: var(--surface); }
+.project-row.archived { opacity: .58; }
+.project-row-dot { width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: var(--green); }
+.project-row.archived .project-row-dot { background: var(--muted); }
+.project-row small { margin-left: auto; color: var(--muted); font-size: 8px; }
 .section-heading { padding-top: 20px; padding-bottom: 8px; }
 .nav-list { padding: 0 10px; }
 .nav-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; text-align: left; font-size: 12px; }
@@ -122,3 +135,22 @@ h2 { font-size: 16px; }
 .diagram-node small { margin-top: 3px; color: var(--muted); font-size: 8px; }
 .diagram-arrow { color: var(--accent); font-size: 13px; }
 .diagram-caption { display: block; margin-top: 7px; color: var(--muted); font-size: 8px; }
+
+.primary-review { border-color: var(--accent); color: white; background: var(--accent); box-shadow: 0 5px 16px #6977df33; }
+.generated-system-map { display: block; min-height: 153px; height: auto; }
+.generated-system-map .diagram-canvas { border: 0; background: transparent; }
+.diagram-canvas { width: 100%; padding: 5px; border: 1px solid #7783ef55; border-radius: 7px; background: var(--surface-soft); }
+.diagram-canvas .diagram-flow { flex-wrap: wrap; justify-content: center; }
+.chat-activity { display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.activity-pulse { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--green); }
+.activity-pulse.active { background: var(--accent); box-shadow: 0 0 0 3px #7c8cff22; }
+.suggestion-actions { display: flex; gap: 6px; margin-left: auto; }
+.suggestion-actions button { padding: 7px 8px; border: 1px solid #7783ef66; border-radius: 6px; color: var(--accent); background: transparent; font-size: 9px; }
+.suggestion-actions button:hover { background: var(--accent-soft); }
+.diagram-svg { display: block; width: max(100%, 950px); height: auto; min-height: 180px; overflow: visible; }
+.diagram-edge { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-opacity: .72; }
+.diagram-svg-node rect { fill: var(--surface); stroke: #7783efaa; stroke-width: 1.2; filter: drop-shadow(0 3px 4px #00000018); }
+.diagram-svg-node text { fill: var(--text); font-size: 10px; font-weight: 650; }
+.diagram-svg-node .diagram-svg-id { fill: var(--muted); font-size: 8px; font-weight: 500; }
+.chat-diagram, .diagram-canvas { overflow: auto; }
+.chat-diagram .diagram-svg { width: max(100%, 850px); min-height: 140px; }

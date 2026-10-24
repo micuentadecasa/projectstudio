@@ -1,9 +1,8 @@
-import React, { StrictMode, useEffect, useMemo, useState } from "react";
+import React, { StrictMode, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { extractMermaid, parseMermaid } from "./diagrams.js";
+import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
-type Section = "Resumen" | "ProductShape" | "Arquitectura" | "Evidencia" | "Cambios";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 
 const navigation: Array<{ section: Section; icon: string; detail: string }> = [
@@ -15,96 +14,159 @@ const navigation: Array<{ section: Section; icon: string; detail: string }> = [
 ];
 
 const initialMessages: Message[] = [
-  { author: "omp", text: "OMP está conectado al proyecto seleccionado." },
-  { author: "omp", text: "Pide una revisión del repositorio para obtener hallazgos y un diagrama basado en su código real." },
+  { author: "omp", text: "Listo. Elige un objetivo o pregunta por el proyecto." },
 ];
 
 function reviewPrompt(section: Section): string {
-  if (section === "ProductShape") return "PRODUCTSHAPE: analiza el producto usando docs/product y el código real. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un bloque Mermaid.";
-  if (section === "Arquitectura") return "ARCHITECTURE: inspecciona el código y tests reales del proyecto. Describe componentes, entradas, salidas, persistencia y relaciones confirmadas. Devuelve hallazgos con rutas verificables y un bloque Mermaid.";
+  if (section === "ProductShape") return "PRODUCTSHAPE: analiza el producto usando primero docs/product y después el código para corroborar. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
+  if (section === "Arquitectura") return "ARCHITECTURE: inspecciona src/ y tests/ reales del proyecto. Describe componentes, entradas, salidas, persistencia y relaciones confirmadas. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
   return "Revisa el proyecto seleccionado y genera hallazgos verificables y un diagrama Mermaid basado sólo en el código real.";
+}
+
+function DiagramVisual({ source, canvas = false }: { source: string; canvas?: boolean }): JSX.Element {
+  const diagram = parseMermaid(source);
+  const layout = layoutDiagram(diagram);
+  const markerId = `diagram-arrow-${useId().replaceAll(":", "")}`;
+  const nodes = new Map(layout.nodes.map((node) => [node.id, node]));
+  return (
+    <div className={canvas ? "diagram-canvas" : "chat-diagram"} aria-label="Diagrama Mermaid generado por OMP">
+      <svg className="diagram-svg" viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label="Vista de relaciones del proyecto">
+        <defs>
+          <marker id={markerId} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 z" fill="var(--accent)" />
+          </marker>
+        </defs>
+        {layout.edges.map((edge, index) => {
+          const from = nodes.get(edge.from);
+          const to = nodes.get(edge.to);
+          if (!from || !to) return null;
+          const startX = from.x + from.width;
+          const startY = from.y + from.height / 2;
+          const endX = to.x;
+          const endY = to.y + to.height / 2;
+          const forward = endX >= startX;
+          const path = forward
+            ? `M ${startX} ${startY} C ${startX + 38} ${startY}, ${endX - 38} ${endY}, ${endX} ${endY}`
+            : `M ${startX} ${startY} C ${startX + 32} ${startY - 34}, ${endX - 32} ${endY - 34}, ${endX} ${endY}`;
+          return <path className="diagram-edge" key={`${edge.from}-${edge.to}-${index}`} d={path} markerEnd={`url(#${markerId})`} />;
+        })}
+        {layout.nodes.map((node) => (
+          <g className="diagram-svg-node" key={node.id}>
+            <rect x={node.x} y={node.y} width={node.width} height={node.height} rx="8" />
+            <text x={node.x + node.width / 2} y={node.y + 20} textAnchor="middle">
+              {node.lines.map((line, index) => <tspan key={`${node.id}-${index}`} x={node.x + node.width / 2} dy={index === 0 ? 0 : 12}>{line}</tspan>)}
+            </text>
+            <text className="diagram-svg-id" x={node.x + node.width / 2} y={node.y + node.height - 8} textAnchor="middle">{node.id}</text>
+          </g>
+        ))}
+      </svg>
+      <small className="diagram-caption">Mapa de relaciones · generado por OMP con evidencia del proyecto</small>
+    </div>
+  );
 }
 
 function AssistantContent({ text }: { text: string }): JSX.Element {
   const source = extractMermaid(text);
   if (!source) return <>{text}</>;
-  const diagram = parseMermaid(source);
   const match = /```mermaid\\s*\\n([\\s\\S]*?)```/i.exec(text);
   const before = match ? text.slice(0, match.index) : text;
   const after = match ? text.slice((match.index ?? 0) + match[0].length) : "";
-  return (
-    <>
-      {before}
-      <div className="chat-diagram" aria-label="Diagrama Mermaid generado por OMP">
-        <div className="diagram-flow">
-          {diagram.nodes.map((node, index) => (
-            <React.Fragment key={node.id}>
-              <div className="diagram-node"><strong>{node.label}</strong><small>{node.id}</small></div>
-              {index < diagram.nodes.length - 1 && <span className="diagram-arrow">→</span>}
-            </React.Fragment>
-          ))}
-        </div>
-        <small className="diagram-caption">Generado por OMP · basado en el bloque Mermaid recibido</small>
-      </div>
-      {after}
-    </>
-  );
+  return <>{before}<DiagramVisual source={source} />{after}</>;
 }
+function stringField(value: Record<string, unknown>, key: string): string | undefined {
+  return typeof value[key] === "string" ? value[key] as string : undefined;
+}
+function displayChatStatus(status: string): string {
+  if (status === "ready" || status === "settled") return "listo";
+  if (status === "failed") return "requiere atención";
+  if (status === "starting" || status === "submitting") return "iniciando";
+  return "trabajando";
+}
+
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [project, setProject] = useState("proyecto · configurando");
+  const [projects, setProjects] = useState<StudioProject[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [storedDiagram, setStoredDiagram] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Resumen");
   const [chatMode, setChatMode] = useState("real");
   const [chatStatus, setChatStatus] = useState("starting");
   const [chatError, setChatError] = useState("");
+  const [activity, setActivity] = useState("Preparando el proyecto");
+  const [bootstrapFailed, setBootstrapFailed] = useState(false);
+  const streamingDraft = useRef("");
   const [sending, setSending] = useState(false);
+
+  async function reloadProjectSurface(): Promise<void> {
+    setChatError("");
+    setBootstrapFailed(false);
+    const registry = await window.studio.projects.list();
+    setProjects(registry.projects);
+    const active = registry.projects.find((candidate) => candidate.id === registry.activeId);
+    if (active) {
+      setActiveProjectId(active.id);
+      setProject(`${active.name} · ${active.archived ? "archivado" : "cwd configurado"}`);
+    }
+    const analysis = await window.studio.project.analysis();
+    setStoredDiagram(analysis.mermaid);
+    const result = await window.studio.chat.start();
+    setChatMode(result.mode);
+    setChatStatus(result.status);
+    setProject(`${result.projectName} · cwd configurado`);
+    if (result.error) setChatError(result.error);
+    const bootstrap = await window.studio.project.bootstrap({ resume: false });
+    if (bootstrap.status === "running") {
+      setSending(true);
+      setActivity("Descubrimiento inicial en curso…");
+    } else if (bootstrap.status === "stored-artifact" || bootstrap.status === "completed") {
+      setActivity("Análisis inicial disponible");
+    } else if (bootstrap.status === "failed") {
+      setBootstrapFailed(true);
+      setActivity("El descubrimiento se detuvo");
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = window.studio.chat.onEvent((event) => {
       if (event.type === "status") {
         setChatStatus(event.status);
+        if (event.status === "starting") setActivity("Conectando con OMP…");
       } else if (event.type === "ready") {
         setChatStatus("ready");
+        setActivity("Listo para continuar");
       } else if (event.type === "message_update") {
         const delta = visibleTextDelta(event.frame);
-        if (!delta) return;
-        setMessages((current) => {
-          const last = current[current.length - 1];
-          if (last?.author === "omp" && last.streaming) {
-            return [...current.slice(0, -1), { ...last, text: last.text + delta }];
-          }
-          return [...current, { author: "omp", text: delta, streaming: true }];
-        });
+        if (delta) streamingDraft.current += delta;
+        setActivity("OMP está analizando el proyecto…");
+      } else if (event.type === "host_tool_call") {
+        setActivity("ProjectStudio está preparando una actualización…");
       } else if (event.type === "message_end") {
-        const text = stringField(event.frame, "text");
-        setMessages((current) => {
-          const last = current[current.length - 1];
-          if (last?.author === "omp" && last.streaming) {
-            return [...current.slice(0, -1), { ...last, text: text ?? last.text, streaming: false }];
-          }
-          return text ? [...current, { author: "omp", text }] : current;
-        });
+        const text = stringField(event.frame, "text") ?? streamingDraft.current;
+        streamingDraft.current = "";
+        if (text) {
+          setMessages((current) => [...current, { author: "omp", text }]);
+          setActivity("Hallazgos preparados");
+        }
       } else if (event.type === "session_settled") {
         setChatStatus("settled");
+        setActivity("Listo para continuar");
         setSending(false);
       } else if (event.type === "warning" || event.type === "error") {
         setChatError(event.message);
+        setActivity("No se pudo completar la tarea");
         setChatStatus("failed");
         setSending(false);
       }
     });
-
-    void window.studio.chat.start().then((result) => {
-      setChatMode(result.mode);
-      setChatStatus(result.status);
-      setProject(`${result.projectName} · cwd configurado`);
-      if (result.error) setChatError(result.error);
-    }).catch((error: unknown) => {
+    void reloadProjectSurface().catch((error: unknown) => {
       setChatStatus("failed");
       setChatError(error instanceof Error ? error.message : String(error));
+      setBootstrapFailed(true);
+      setActivity("No se pudo cargar el proyecto");
     });
     return unsubscribe;
   }, []);
@@ -113,21 +175,63 @@ function App(): JSX.Element {
     () => navigation.find((item) => item.section === section) ?? navigation[0],
     [section],
   );
+  const latestDiagram = useMemo(
+    () => [...messages].reverse().map((message) => extractMermaid(message.text)).find((source): source is string => Boolean(source)) ?? storedDiagram,
+    [messages, storedDiagram],
+  );
+  function workflowForSection(currentSection: Section): "brownfield-discovery" | "architecture-documentation" | "architecture-planning" {
+    return currentSection === "ProductShape" ? "brownfield-discovery" : "architecture-documentation";
+  }
 
-  async function sendMessage(): Promise<void> {
-    const text = chatInput.trim();
+  async function continueDiscovery(): Promise<void> {
+    setBootstrapFailed(false);
+    setChatError("");
+    setSending(true);
+    setActivity("Reanudando el descubrimiento…");
+    try {
+      await window.studio.project.bootstrap({ resume: true });
+    } catch (error) {
+      setBootstrapFailed(true);
+      setSending(false);
+      setChatError(error instanceof Error ? error.message : String(error));
+      setActivity("No se pudo reanudar el descubrimiento");
+    }
+  }
+
+  async function sendMessage(prompt?: string, requestedWorkflow?: "brownfield-discovery" | "architecture-documentation" | "architecture-planning"): Promise<void> {
+    const text = (prompt ?? chatInput).trim();
     if (!text) return;
     setMessages((current) => [...current, { author: "user", text }]);
     setChatInput("");
     setChatError("");
     setSending(true);
+    setActivity("Preparando la tarea…");
     try {
-      await window.studio.chat.send(text);
+      await window.studio.command.submit({ workflow: requestedWorkflow ?? workflowForSection(section), prompt: text });
     } catch (error) {
       setSending(false);
       setChatError(error instanceof Error ? error.message : String(error));
       setChatStatus("failed");
+      setActivity("No se pudo iniciar la tarea");
     }
+  }
+  async function openProject(): Promise<void> {
+    const result = await window.studio.projects.open();
+    if (result) await reloadProjectSurface();
+  }
+
+  async function activateProject(id: string): Promise<void> {
+    if (!id || id === activeProjectId) return;
+    await window.studio.projects.activate(id);
+    setMessages(initialMessages);
+    await reloadProjectSurface();
+  }
+
+  async function archiveActiveProject(): Promise<void> {
+    if (!activeProjectId) return;
+    await window.studio.projects.archive(activeProjectId);
+    setMessages(initialMessages);
+    await reloadProjectSurface();
   }
 
   return (
@@ -142,8 +246,15 @@ function App(): JSX.Element {
         </div>
         <label className="project-picker">
           <span>Proyecto</span>
-          <select value={project} aria-label="Proyecto activo" disabled><option>{project}</option></select>
+          <select value={activeProjectId} aria-label="Proyecto activo" onChange={(event) => void activateProject(event.target.value)}>
+            {projects.length === 0 && <option value="">Cargando proyectos…</option>}
+            {projects.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.name}{candidate.archived ? " · archivado" : ""}</option>)}
+          </select>
         </label>
+        <div className="project-actions">
+          <button className="quiet-button" onClick={() => void openProject()} title="Añadir o crear referencia a un proyecto local">＋</button>
+          <button className="quiet-button" onClick={() => void archiveActiveProject()} title="Archivar referencia; no borra archivos">⌫</button>
+        </div>
         <div className="topbar-context">
           <span className="status-dot" />
           <span>main · limpio</span>
@@ -167,6 +278,20 @@ function App(): JSX.Element {
           <div className="workspace-tree">
             <div className="tree-root"><span className="tree-chevron">⌄</span><span className="folder-icon">▰</span>{project.split(" · ")[0]}</div>
             <div className="tree-branch"><span>◌</span> cwd configurado por entorno</div>
+            <div className="tree-signals">
+              {projects.find((candidate) => candidate.id === activeProjectId)?.detected.productShape && <span>ProductShape detectado</span>}
+              {projects.find((candidate) => candidate.id === activeProjectId)?.detected.architecture && <span>Arquitectura detectada</span>}
+            </div>
+          </div>
+          <div className="project-manager">
+            <div className="sidebar-heading project-manager-heading"><span>PROYECTOS</span><button className="quiet-button" onClick={() => void openProject()} aria-label="Añadir proyecto">＋</button></div>
+            <div className="project-list">
+              {projects.map((candidate) => (
+                <button className={`project-row ${candidate.id === activeProjectId ? "active" : ""} ${candidate.archived ? "archived" : ""}`} key={candidate.id} onClick={() => void activateProject(candidate.id)} title={candidate.path}>
+                  <span className="project-row-dot" /> <span>{candidate.name}</span><small>{candidate.archived ? "archivado" : candidate.detected.productShape ? "ProductShape" : "local"}</small>
+                </button>
+              ))}
+            </div>
           </div>
           <nav className="nav-list">
             <div className="sidebar-heading section-heading"><span>VISTAS</span></div>
@@ -186,7 +311,7 @@ function App(): JSX.Element {
           <div className="sidebar-footer">
             <div className="connection-card">
               <span className="connection-icon">⌁</span>
-              <div><strong>{chatMode === "real" ? "OMP real" : "OMP emulado"}</strong><small>RPC v2 · {chatStatus}</small></div>
+              <div><strong>{chatMode === "real" ? "OMP real" : "OMP emulado"}</strong><small>estado · {displayChatStatus(chatStatus)}</small></div>
             </div>
             <div className="phase-label">FASE 04 · CHAT</div>
           </div>
@@ -209,7 +334,9 @@ function App(): JSX.Element {
                 <h1>{selectedNavigation.section === "Resumen" ? "Tu producto, en contexto" : selectedNavigation.section}</h1>
                 <p>{selectedNavigation.detail}. El chat usa OMP real con el cwd del proyecto seleccionado.</p>
               </div>
-              <button className="outline-button" onClick={() => setActiveTab("Resumen")}>Ver resumen</button>
+              {section === "ProductShape" || section === "Arquitectura"
+                ? <button className="outline-button primary-review" onClick={() => void sendMessage(reviewPrompt(section))}>{section === "ProductShape" ? "Revisar y diagramar" : "Revisar arquitectura"}</button>
+                : <button className="outline-button" onClick={() => setActiveTab("Resumen")}>Ver resumen</button>}
             </section>
             <section className="metric-grid" aria-label="Resumen del proyecto">
               <article className="metric-card accent-card"><div className="metric-label">CASOS DE USO</div><div className="metric-value">08</div><div className="metric-note positive">↑ 2 esta semana</div></article>
@@ -219,16 +346,18 @@ function App(): JSX.Element {
             </section>
             <section className="dashboard-grid">
               <article className="panel-card architecture-card">
-                <div className="card-heading"><div><div className="card-kicker">ARQUITECTURA · INSPECCIÓN REAL</div><h2>Mapa del sistema</h2></div><button className="more-button" aria-label="Más opciones">•••</button></div>
-                <div className="system-map">
-                  <div className="map-node user-node"><span>◉</span><strong>Proyecto seleccionado</strong><small>cwd del OMP real</small></div>
-                  <div className="map-line line-one" />
-                  <div className="map-node app-node"><span>✦</span><strong>OMP RPC</strong><small>análisis bajo demanda</small></div>
-                  <div className="map-line line-two" />
-                  <div className="map-node service-node"><span>⌘</span><strong>Diagrama pendiente</strong><small>pide una revisión en el chat</small></div>
-                  <div className="map-badge">sin inventar componentes</div>
-                </div>
-                <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); setChatInput(reviewPrompt("Arquitectura")); }}>Pedir diagrama real <span>→</span></button>
+                <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? "MAPA CONFIRMADO POR OMP" : "ARQUITECTURA · INSPECCIÓN REAL"}</div><h2>{latestDiagram ? "Diagrama del proyecto" : "Mapa del sistema"}</h2></div><button className="more-button" aria-label="Más opciones">•••</button></div>
+                {latestDiagram
+                  ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div>
+                  : <div className="system-map">
+                    <div className="map-node user-node"><span>◉</span><strong>Proyecto seleccionado</strong><small>cwd del OMP real</small></div>
+                    <div className="map-line line-one" />
+                    <div className="map-node app-node"><span>✦</span><strong>OMP RPC</strong><small>análisis bajo demanda</small></div>
+                    <div className="map-line line-two" />
+                    <div className="map-node service-node"><span>⌘</span><strong>Diagrama pendiente</strong><small>usa el botón superior</small></div>
+                    <div className="map-badge">sin inventar componentes</div>
+                  </div>}
+                <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); void sendMessage(reviewPrompt("Arquitectura")); }}>Pedir diagrama real <span>→</span></button>
               </article>
               <article className="panel-card activity-card">
                 <div className="card-heading"><div><div className="card-kicker">ACTIVIDAD</div><h2>Últimos hallazgos</h2></div><span className="live-badge"><span /> LIVE</span></div>
@@ -240,19 +369,32 @@ function App(): JSX.Element {
                 <button className="card-link" onClick={() => setSection("Evidencia")}>Ver timeline <span>→</span></button>
               </article>
             </section>
-            <section className="welcome-strip"><div className="welcome-icon">✦</div><div><strong>Empieza por preguntar algo sobre el proyecto</strong><span>El chat conserva el contexto de la vista seleccionada.</span></div><button className="suggestion" onClick={() => setChatInput(reviewPrompt(section))}>Revisar y diagramar <span>↗</span></button></section>
+            <section className="welcome-strip">
+              <div className="welcome-icon">✦</div>
+              <div>
+                <strong>{sending ? "Descubrimiento en curso" : "Siguiente paso recomendado"}</strong>
+                <span>{activity}. Puedes revisar evidencias mientras el workflow continúa.</span>
+              </div>
+              {bootstrapFailed
+                ? <button className="outline-button" onClick={() => void continueDiscovery()}>Continuar análisis</button>
+                : <div className="suggestion-actions">
+                  <button onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); void sendMessage("Documenta la arquitectura existente a partir de ProductShape, src/ y tests.", "architecture-documentation"); }}>Documentar arquitectura</button>
+                  <button onClick={() => void sendMessage("Propón una variante local y otra AWS para este producto, con trade-offs y riesgos.", "architecture-planning")}>Comparar local / AWS</button>
+                </div>}
+            </section>
           </div>
         </main>
 
         <aside className="chat-panel" aria-label="Chat OMP">
-          <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">REAL</span></div><div className="chat-context">contexto: {section.toLowerCase()} · {chatStatus}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
+          <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">REAL</span></div><div className="chat-context">contexto: {section.toLowerCase()} · {displayChatStatus(chatStatus)}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
+          <div className="chat-activity" aria-live="polite"><span className={`activity-pulse ${sending ? "active" : ""}`} />{activity}</div>
           <div className="chat-messages" aria-live="polite">
-            <div className="chat-date">HOY · SESIÓN RPC</div>
+            <div className="chat-date">HOY · SESIÓN ACTIVA</div>
             {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className={`message-bubble ${message.streaming ? "streaming" : ""}`}><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.author === "omp" ? <AssistantContent text={message.text || (message.streaming ? "…" : "")} /> : message.text}</div></div>)}
           </div>
           {chatError && <div className="chat-error" role="alert">{chatError}</div>}
-          <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">{sending ? "OMP está respondiendo…" : "↵ enviar · ⇧↵ nueva línea"}</span><button className="send-button" onClick={() => void sendMessage()} aria-label="Enviar mensaje">↑</button></div></div>
-          <div className="chat-footer"><span className="safe-dot" /> RPC local · {chatStatus} <span className="footer-spacer" /><span>v0.2 chat</span></div>
+          <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">{sending ? "Tarea en curso…" : "↵ enviar · ⇧↵ nueva línea"}</span><button className="send-button" onClick={() => void sendMessage()} aria-label="Enviar mensaje">↑</button></div></div>
+          <div className="chat-footer"><span className="safe-dot" /> Sesión local · {displayChatStatus(chatStatus)} <span className="footer-spacer" /><span>ProjectStudio</span></div>
         </aside>
       </div>
       <footer className="statusbar"><span><span className="status-dot" /> Proyecto listo</span><span>8 casos de uso</span><span>12 evidencias</span><span>rama main</span><span className="statusbar-spacer" /><span>Fase 04 · chat RPC</span></footer>

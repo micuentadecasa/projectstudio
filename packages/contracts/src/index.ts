@@ -16,7 +16,6 @@ export const GateStateSchema = z.enum([
   "rejected",
   "changes-requested",
 ]);
-
 export const JobStateSchema = z.enum([
   "queued",
   "running",
@@ -26,6 +25,25 @@ export const JobStateSchema = z.enum([
   "failed",
   "cancelled",
 ]);
+
+export const WorkspaceWorkflowSchema = z.enum([
+  "brownfield-discovery",
+  "architecture-documentation",
+  "architecture-planning",
+]);
+
+export const ArchitectureEnvironmentSchema = z.enum(["local", "aws", "azure"]);
+
+export const WorkspaceIntentSchema = z.object({
+  workflow: WorkspaceWorkflowSchema,
+  environment: ArchitectureEnvironmentSchema,
+  sourceOfTruth: z.enum(["observed", "accepted", "proposal"]),
+  requiresApproval: z.boolean(),
+});
+
+export type WorkspaceWorkflow = z.infer<typeof WorkspaceWorkflowSchema>;
+export type ArchitectureEnvironment = z.infer<typeof ArchitectureEnvironmentSchema>;
+export type WorkspaceIntent = z.infer<typeof WorkspaceIntentSchema>;
 
 export const StudioEnvelopeSchema = z.object({
   schemaVersion: z.literal(1),

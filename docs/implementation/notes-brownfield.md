@@ -44,11 +44,16 @@ El modelo de producto está organizado explícitamente por casos de uso, requisi
 
 ## Evidencia de OMP
 
-- ProductShape real: `docs/implementation/evidence/F05-T01-notes-productshape-real.png`
+- ProductShape CLI real: `docs/implementation/evidence/F05-T01-notes-productshape-cli.md`
+- Mermaid CLI real: `docs/implementation/evidence/F05-T01-notes-productshape-cli.mermaid`
+- Captura ProductShape real: `docs/implementation/evidence/F05-T01-notes-productshape-real.png`
 - Arquitectura real: `docs/implementation/evidence/F05-T02-notes-architecture-real.png`
-- Comando reproducible: `pnpm test:e2e:notes`
+- Diagrama persistido mostrado en canvas: `docs/implementation/evidence/F05-T06-notes-stored-diagram.png`
+- Comando ProductShape reproducible: `pnpm spike:notes:productshape`
+- Smoke visual sin nueva llamada OMP: `pnpm test:e2e:notes:diagram`
+- Comando E2E real de Electron: `pnpm test:e2e:notes`
 
-## Hallazgos reales de ProductShape
+La UI no manda prompts directamente al proceso OMP. Envía un comando al `StudioAgentRuntime`; su grafo LangGraph construye el contexto del workflow y sólo el nodo `invoke_omp` llama al gateway OMP. Los deltas y frames internos alimentan actividad resumida («analizando», «preparando actualización»); sólo la respuesta final se publica en el chat.
 
 OMP leyó primero `docs/product/` y corroboró con el código:
 
@@ -78,5 +83,7 @@ Las respuestas completas del proceso real y las capturas son:
 - `docs/implementation/evidence/F05-T01-notes-productshape-real.md`
 - `docs/implementation/evidence/F05-T01-notes-productshape-real.png`
 - `docs/implementation/evidence/F05-T01-notes-productshape-real.mermaid`: Mermaid original guardado desde la respuesta real de OMP para probar el renderer sin otra llamada.
+- `docs/implementation/evidence/F05-T01-notes-productshape-cli.md`: respuesta textual completa capturada por CLI.
+- `docs/implementation/evidence/F05-T01-notes-productshape-cli.mermaid`: bloque Mermaid extraído de esa respuesta para pruebas sin nuevas llamadas.
 - `docs/implementation/evidence/F05-T02-notes-architecture-real.md`
 - `docs/implementation/evidence/F05-T02-notes-architecture-real.png`

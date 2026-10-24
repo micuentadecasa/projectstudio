@@ -9,6 +9,6 @@ export function visibleTextDelta(frame: ChatFrame): string | undefined {
   const nested = frame.assistantMessageEvent;
   if (typeof nested !== "object" || nested === null) return undefined;
   const nestedFrame = nested as ChatFrame;
-  if (stringField(nestedFrame, "type") !== "text_delta") return undefined;
+  if (nestedFrame.type !== "text_delta") return undefined;
   return stringField(nestedFrame, "delta");
 }

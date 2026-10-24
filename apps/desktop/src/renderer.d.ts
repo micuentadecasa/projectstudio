@@ -11,15 +11,37 @@ type StudioChatEvent =
   | { type: "warning"; message: string }
   | { type: "error"; message: string };
 
+type StudioProject = {
+  id: string;
+  name: string;
+  path: string;
+  archived: boolean;
+  lastOpenedAt: string;
+  detected: { productShape: boolean; architecture: boolean };
+};
+type StudioProjectRegistry = { version: 1; activeId: string; projects: StudioProject[] };
+
 declare global {
   interface Window {
     studio: {
       phase: string;
       runtime: string;
       omp: string;
+      projects: {
+        list: () => Promise<StudioProjectRegistry>;
+        open: () => Promise<{ registry: StudioProjectRegistry; active: StudioProject | null } | null>;
+        activate: (id: string) => Promise<{ registry: StudioProjectRegistry; active: StudioProject | null }>;
+        archive: (id: string) => Promise<StudioProjectRegistry>;
+      };
+      project: {
+        analysis: () => Promise<{ projectName: string; mermaid: string | null }>;
+        bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact"; started: boolean; canResume?: boolean }>;
+      };
+      command: {
+        submit: (command: { workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning"; prompt: string }) => Promise<{ accepted: boolean; requestId: string }>;
+      };
       chat: {
         start: () => Promise<{ mode: string; status: string; projectName: string; projectRoot: string; error?: string }>;
-        send: (message: string) => Promise<{ requestId: string; command: string; accepted: boolean }>;
         stop: () => Promise<void>;
         onEvent: (listener: (event: StudioChatEvent) => void) => () => void;
       };

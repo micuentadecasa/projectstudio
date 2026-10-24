@@ -1,6 +1,6 @@
 # ProjectStudio
 
-Shell de escritorio Electron + React para ProjectStudio. La implementación actual corresponde a **Fase 04**: chat visible conectado al adaptador OMP RPC v2. OMP instalado y autenticado es un requisito del usuario; no hay fallback silencioso ni emulador en producto o verificaciones.
+Shell de escritorio Electron + React para ProjectStudio. La implementación actual combina un workbench brownfield con workflows LangGraph y chat de presentación conectado al adaptador OMP RPC v2. OMP instalado y autenticado es un requisito del usuario; no hay fallback silencioso ni emulador en producto o verificaciones.
 
 ## Requisitos
 
@@ -57,41 +57,62 @@ Para inspeccionar otro repositorio local:
 PROJECTSTUDIO_PROJECT_ROOT=/ruta/absoluta/al/proyecto pnpm desktop
 ```
 
-El proceso OMP recibe esa ruta como `cwd`; las sesiones se guardan en `.tmp/omp-sessions` de ProjectStudio. El selector muestra el nombre real del repositorio y queda bloqueado para evitar fingir un cambio de cwd que no se ha ejecutado.
+El proceso OMP recibe esa ruta como `cwd`; las sesiones se guardan en `.tmp/omp-sessions` de ProjectStudio. El selector superior y el bloque `PROYECTOS` muestran el registro local. `＋` abre otro directorio y lo registra; `⌫` archiva sólo la referencia local: nunca borra ni modifica archivos del repositorio.
+
+## Gestión de proyectos y reanudación
+
+1. Arranca `pnpm desktop` o `pnpm desktop:notes`.
+2. En `PROYECTOS`, pulsa `＋` para añadir/crear la referencia a una carpeta local. La carpeta se convierte en el cwd real del siguiente worker OMP.
+3. Cambia de proyecto desde el selector superior o la lista lateral. ProjectStudio reinicia el worker con ese cwd.
+4. `⌫` archiva la referencia en `.tmp/projectstudio-projects.json`; no ejecuta `rm`, no elimina Git y no toca el proyecto.
+5. Al reabrir un proyecto archivado, seleccionarlo vuelve a activarlo y escanea `docs/product`, `productshape`, `docs/architecture`, `architecture` y `docs/adr`. Las señales detectadas aparecen en el explorador.
+
+La persistencia tiene dos capas deliberadas:
+
+- Registro de proyectos: JSON local de ProjectStudio en `.tmp/projectstudio-projects.json`, sólo referencias, estado archivado y señales detectadas.
+- Checkpoints de LangGraph: SQLite local en `.tmp/agent-runtime.sqlite`, separado del repositorio analizado.
+
+Los artefactos del proyecto analizado no se borran ni se escriben durante esta gestión. Un proyecto existente puede reaparecer en el registro al iniciar con `PROJECTSTUDIO_PROJECT_ROOT`.
 
 ## Qué comprobar manualmente
 
-1. Cambia entre `Resumen`, `ProductShape`, `Arquitectura`, `Evidencia` y `Cambios`.
-2. En `ProductShape`, pide a OMP que lea primero `docs/product` y extraiga propósito, actores, casos de uso, bounded contexts, reglas y restricciones.
-3. En `Arquitectura`, pide que contraste esos hallazgos con `src/` y `tests/`.
-4. Comprueba que el selector muestra el nombre del repositorio configurado por `PROJECTSTUDIO_PROJECT_ROOT`.
-5. Cambia entre tema oscuro y claro.
-6. Arrastra el borde del explorador izquierdo y del chat derecho.
-7. Escribe una petición de revisión y diagrama en el chat y pulsa `Enviar`.
-8. Si OMP devuelve un bloque Mermaid, ProjectStudio lo pinta como mapa visual dentro del chat y conserva el texto recibido.
-9. Comprueba que aparecen deltas parciales y una respuesta final del modelo configurado.
-10. Comprueba que el estado del chat termina en `settled`.
-11. Abre el menú `Ver` para probar Reload, DevTools y fullscreen.
+1. Confirma que `PROYECTOS` lista el proyecto activo y que `ProductShape detectado` / `Arquitectura detectada` aparecen cuando existen esas carpetas.
+2. Pulsa `＋`, elige una carpeta y confirma que aparece como nueva referencia.
+3. Cambia entre dos proyectos; confirma que cambia el nombre, cwd y estado de detección.
+4. Pulsa `⌫`; confirma que la referencia queda como `archivado` y que los archivos del repositorio siguen intactos.
+5. Vuelve a seleccionar el proyecto archivado; confirma que se reactiva y vuelve a escanear sus carpetas.
+6. Cambia entre `Resumen`, `ProductShape`, `Arquitectura`, `Evidencia` y `Cambios`.
+7. Con Notes, `ProductShape` muestra el Mermaid ProductShape previamente guardado en `docs/implementation/evidence/F05-T01-notes-productshape-cli.mermaid`; esto no ejecuta una nueva petición.
+8. Pulsa `Revisar y diagramar` arriba a la derecha para enviar la revisión real a OMP automáticamente; no hace falta pulsar `Enter`.
+9. En `Arquitectura`, pide que contraste los hallazgos con `src/` y `tests/`.
+10. Comprueba progreso resumido, respuesta final del workflow y estado `settled`.
+11. Cambia entre tema oscuro y claro; arrastra los bordes del explorador y chat.
+12. Si OMP devuelve Mermaid, comprueba el mapa visual en chat y canvas central.
+## Cómo se ejecutan las peticiones
+
+El chat y los botones no llaman a OMP directamente. Envían un comando al proceso principal; el workflow LangGraph selecciona el flujo (brownfield, documentación de arquitectura o propuesta local/cloud) y sólo su nodo de agente invoca OMP. La UI muestra progreso resumido y resultados publicados; no muestra prompts, argumentos de herramientas ni frames RPC.
+
+La arquitectura de planificación mantiene la arquitectura aceptada como baseline y genera una propuesta aislada de Architecture Lab. Ninguna propuesta modifica código o despliegue sin un gate explícito.
 
 ## Ejecutar verificaciones
 
-Regresión completa:
+Regresión local:
 
 ```bash
 pnpm build:all
 pnpm lint
 pnpm test
-pnpm test:e2e
 ```
 
-Tests y smoke específicos:
+Smoke Electron real:
 
 ```bash
-pnpm test:f03
-pnpm spike:omp-adapter
-pnpm spike:omp
-pnpm test:e2e
+pnpm test:f04
+pnpm test:e2e:projects
+pnpm test:e2e:notes:diagram
 ```
+
+`test:f04` usa el OMP instalado y autenticado por el usuario. `test:e2e:projects` prueba el archivado reversible y confirma que la ruta sigue existiendo. `test:e2e:notes:diagram` reutiliza el Mermaid almacenado, no envía prompts ni consume tokens.
 
 El smoke de Playwright usa el OMP instalado y autenticado por el usuario. Genera capturas reales en:
 

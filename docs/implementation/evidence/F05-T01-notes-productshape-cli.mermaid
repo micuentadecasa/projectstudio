@@ -1,0 +1,38 @@
+flowchart LR
+    Learner["Learner"] --> App["FastAPI app + browser viewer"]
+    Operator["Local operator"] --> App
+    Operator --> Worker["Local worker"]
+
+    App --> DB["SQLite: Songs, Parts, Revisions, Jobs"]
+    App --> Files["Local source and artifact files"]
+    DB --> Worker
+    Worker --> Runner["Import runner"]
+
+    Runner --> Acquisition["Local / YouTube-NAS acquisition"]
+    Acquisition --> Runner
+    Runner --> Adapter["Transcription Adapter"]
+    Adapter --> MuScriptor["MuScriptor"]
+    MuScriptor --> Runner
+
+    Runner --> OMR["Optional score-image OMR"]
+    OMR --> Runner
+
+    Runner --> Canonical["Practice Score JSON\ncanonical representation"]
+    Runner --> Files
+    Canonical --> Files
+    Files --> DB
+
+    DB --> Library["Local practice library"]
+    Files --> Library
+    Library --> Player["Interactive Notation Player"]
+    Canonical --> Player
+    Files --> Player
+    Player --> Learner
+
+    Player --> Teacher["Deterministic practice analysis"]
+    Teacher --> Plan["Pedagogical plan"]
+    Plan --> Rephrase["Optional assistant / voice rephrasing"]
+    Rephrase --> Pending["Pending action"]
+    Plan --> Pending
+    Learner -. confirms .-> Pending
+    Pending --> Player

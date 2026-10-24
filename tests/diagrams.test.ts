@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { extractMermaid, parseMermaid } from "../apps/desktop/src/renderer/diagrams.js";
+import { extractMermaid, layoutDiagram, parseMermaid } from "../apps/desktop/src/renderer/diagrams.js";
 
 describe("diagramas Mermaid del chat", () => {
   it("extrae sólo un bloque Mermaid fenced", () => {
@@ -15,10 +15,16 @@ describe("diagramas Mermaid del chat", () => {
       edges: [{ from: "A", to: "B" }],
     });
   });
-  it("parsea el Mermaid guardado desde una revisión real de Notes sin llamar a OMP", async () => {
-    const source = await readFile(resolve(process.cwd(), "docs/implementation/evidence/F05-T01-notes-productshape-real.mermaid"), "utf8");
+  it("parsea y distribuye el Mermaid guardado por la revisión ProductShape CLI real de Notes sin llamar a OMP", async () => {
+    const source = await readFile(resolve(process.cwd(), "docs/implementation/evidence/F05-T01-notes-productshape-cli.mermaid"), "utf8");
+    const diagram = parseMermaid(source);
+    const layout = layoutDiagram(diagram);
     expect(source).toContain("flowchart LR");
-    expect(source).toContain("BC-PRACTICE-MATERIAL");
-    expect(parseMermaid(source).nodes.length).toBeGreaterThan(5);
+    expect(source).toContain("MuScriptor");
+    expect(source).toContain("SQLite");
+    expect(diagram.nodes.length).toBeGreaterThan(5);
+    expect(diagram.edges.length).toBeGreaterThan(10);
+    expect(layout.nodes.every((node) => node.lines.length > 0)).toBe(true);
+    expect(layout.width).toBeGreaterThan(360);
   });
 });

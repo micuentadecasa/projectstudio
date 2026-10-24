@@ -24,17 +24,15 @@ try {
 
   await window.getByTitle("Producto y casos de uso").click();
   await window.getByRole("heading", { name: "ProductShape" }).waitFor();
-  await window.getByLabel("Mensaje para OMP").fill(
-    "PRODUCTSHAPE: analiza el producto Notes/DrumCoach usando primero docs/product y sólo después el código para corroborar. Extrae propósito, actores, casos de uso, bounded contexts, reglas de negocio y restricciones. Devuelve máximo 6 hallazgos con rutas de archivo verificables. Termina con una sección DIAGRAMA y un único bloque Mermaid flowchart LR de actores, capacidades y bounded contexts confirmados. No inventes componentes.",
-  );
   const productShapeCount = await window.locator(".message-row.omp").count();
-  await window.getByRole("button", { name: "Enviar mensaje" }).click();
+  await window.getByRole("button", { name: "Revisar y diagramar" }).click();
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, productShapeCount, { timeout: 180_000 });
   const productShapeMessage = window.locator(".message-row.omp").last();
   await productShapeMessage.waitFor({ timeout: 180_000 });
-  await window.waitForFunction(() => document.querySelector(".chat-footer")?.textContent?.includes("settled"), undefined, { timeout: 180_000 });
+  await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
   const productShapeResponse = await productShapeMessage.innerText();
   if ((await productShapeMessage.locator(".chat-diagram").count()) === 0) throw new Error(`ProductShape response did not contain a Mermaid diagram:\n${productShapeResponse}`);
+  if ((await window.locator(".generated-system-map .diagram-canvas").count()) === 0) throw new Error("ProductShape diagram was not published to the canvas");
   const productShapeScreenshot = "docs/implementation/evidence/F05-T01-notes-productshape-real.png";
   await window.locator(".chat-messages").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await window.screenshot({ path: resolve(root, productShapeScreenshot), fullPage: false });
@@ -50,7 +48,7 @@ try {
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, architectureCount, { timeout: 180_000 });
   const architectureMessage = window.locator(".message-row.omp").last();
   await architectureMessage.waitFor({ timeout: 180_000 });
-  await window.waitForFunction(() => document.querySelector(".chat-footer")?.textContent?.includes("settled"), undefined, { timeout: 180_000 });
+  await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
   const architectureResponse = await architectureMessage.innerText();
   if ((await architectureMessage.locator(".chat-diagram").count()) === 0) throw new Error(`Architecture response did not contain a Mermaid diagram:\n${architectureResponse}`);
   const architectureScreenshot = "docs/implementation/evidence/F05-T02-notes-architecture-real.png";

@@ -5,9 +5,21 @@ contextBridge.exposeInMainWorld("studio", {
   phase: "04",
   runtime: "electron",
   omp: "real",
+  projects: {
+    list: () => ipcRenderer.invoke("studio:projects:list"),
+    open: () => ipcRenderer.invoke("studio:projects:open"),
+    activate: (id) => ipcRenderer.invoke("studio:projects:activate", id),
+    archive: (id) => ipcRenderer.invoke("studio:projects:archive", id),
+  },
+  project: {
+    analysis: () => ipcRenderer.invoke("studio:project:analysis"),
+    bootstrap: (options) => ipcRenderer.invoke("studio:project:bootstrap", options),
+  },
+  command: {
+    submit: (command) => ipcRenderer.invoke("studio:command:submit", command),
+  },
   chat: {
     start: () => ipcRenderer.invoke("studio:chat:start"),
-    send: (message) => ipcRenderer.invoke("studio:chat:send", message),
     stop: () => ipcRenderer.invoke("studio:chat:stop"),
     onEvent: (listener) => {
       const handler = (_event, payload) => listener(payload);

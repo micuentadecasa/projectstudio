@@ -88,6 +88,8 @@ Los artefactos del proyecto analizado no se borran ni se escriben durante esta g
 10. Comprueba progreso resumido, respuesta final del workflow y estado `settled`.
 11. Cambia entre tema oscuro y claro; arrastra los bordes del explorador y chat.
 12. Si OMP devuelve Mermaid, comprueba el mapa visual en chat y canvas central.
+13. En el chat inicial confirma que aparece la personalidad `Arquitecto de Proyecto` y los objetivos `Entender el proyecto`, `Documentar arquitectura` y `Comparar local / AWS`.
+14. Pulsa uno de esos objetivos o escribe una pregunta nueva en el composer visible del panel derecho.
 ## Cómo se ejecutan las peticiones
 
 El chat y los botones no llaman a OMP directamente. Envían un comando al proceso principal; el workflow LangGraph selecciona el flujo (brownfield, documentación de arquitectura o propuesta local/cloud) y sólo su nodo de agente invoca OMP. La UI muestra progreso resumido y resultados publicados; no muestra prompts, argumentos de herramientas ni frames RPC.

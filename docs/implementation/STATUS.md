@@ -118,6 +118,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T08 | done | actividad resumida visible; prompts, deltas y frames internos ocultos |
 | F05-T09 | done | listado visible, alta por carpeta, cambio de cwd y archivado soft-delete |
 | F05-T10 | done | `.tmp/projectstudio-projects.json`, detección al retomar y ADR-024 |
+| F05-T11 | done | personalidad visible del Arquitecto de Proyecto, objetivos sugeridos dentro del chat y composer visible |
 ### Verificación F05
 
 ```bash

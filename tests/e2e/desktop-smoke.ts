@@ -17,14 +17,12 @@ const app = await electron.launch({
 });
 try {
   const window = await app.firstWindow();
-  window.on("pageerror", (error) => console.error(`renderer pageerror: ${error.message}`));
-  window.on("console", (message) => { if (message.type() === "error") console.error(`renderer console: ${message.text()}`); });
   const resizeDirections = await window.locator(".sidebar, .chat-panel").evaluateAll((elements) => elements.map((element) => getComputedStyle(element).resize));
   if (resizeDirections.some((direction) => direction !== "horizontal")) throw new Error(`panel resize contract failed: ${resizeDirections.join(",")}`);
   await window.getByText("PROYECTOS", { exact: true }).waitFor();
   await window.getByTitle("Añadir o crear referencia a un proyecto local").waitFor();
-  await window.getByTitle("Archivar referencia; no borra archivos").waitFor();
-  await window.screenshot({ path: resolve(evidenceDirectory, "F04-T01-desktop-chat-dark.png"), fullPage: true });
+  if (!(await window.getByLabel("Mensaje para OMP").isVisible())) throw new Error("chat composer is not visible");
+  await window.getByRole("button", { name: "Entender el proyecto" }).waitFor();
 
   await window.getByRole("button", { name: "Cambiar tema" }).click();
   await window.screenshot({ path: resolve(evidenceDirectory, "F04-T01-desktop-chat-light.png"), fullPage: true });

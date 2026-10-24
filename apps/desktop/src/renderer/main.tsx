@@ -14,7 +14,7 @@ const navigation: Array<{ section: Section; icon: string; detail: string }> = [
 ];
 
 const initialMessages: Message[] = [
-  { author: "omp", text: "Listo. Elige un objetivo o pregunta por el proyecto." },
+  { author: "omp", text: "Soy tu Arquitecto de Proyecto. Ya tengo este repositorio en contexto. Te propongo empezar por entender el producto, documentar la arquitectura existente o comparar una evolución local con AWS. Elige una opción o escríbeme una pregunta." },
 ];
 
 function reviewPrompt(section: Section): string {
@@ -377,10 +377,7 @@ function App(): JSX.Element {
               </div>
               {bootstrapFailed
                 ? <button className="outline-button" onClick={() => void continueDiscovery()}>Continuar análisis</button>
-                : <div className="suggestion-actions">
-                  <button onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); void sendMessage("Documenta la arquitectura existente a partir de ProductShape, src/ y tests.", "architecture-documentation"); }}>Documentar arquitectura</button>
-                  <button onClick={() => void sendMessage("Propón una variante local y otra AWS para este producto, con trade-offs y riesgos.", "architecture-planning")}>Comparar local / AWS</button>
-                </div>}
+                : <span className="suggestion-note">El Arquitecto de Proyecto te propone objetivos en el chat.</span>}
             </section>
           </div>
         </main>
@@ -391,6 +388,14 @@ function App(): JSX.Element {
           <div className="chat-messages" aria-live="polite">
             <div className="chat-date">HOY · SESIÓN ACTIVA</div>
             {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className={`message-bubble ${message.streaming ? "streaming" : ""}`}><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.author === "omp" ? <AssistantContent text={message.text || (message.streaming ? "…" : "")} /> : message.text}</div></div>)}
+          </div>
+          <div className="chat-suggestions" aria-label="Objetivos sugeridos">
+            <div className="chat-suggestions-label">Te sugiero empezar por</div>
+            <div className="chat-suggestions-grid">
+              <button onClick={() => void sendMessage("Analiza este proyecto como brownfield: empieza por docs/product y después contrasta con el código. Devuelve hechos, inferencias, incógnitas y un diagrama confirmado.", "brownfield-discovery")} disabled={sending}>Entender el proyecto</button>
+              <button onClick={() => void sendMessage("Documenta la arquitectura existente a partir de ProductShape, src/ y tests.", "architecture-documentation")} disabled={sending}>Documentar arquitectura</button>
+              <button onClick={() => void sendMessage("Propón una variante local y otra AWS para este producto, con trade-offs y riesgos.", "architecture-planning")} disabled={sending}>Comparar local / AWS</button>
+            </div>
           </div>
           {chatError && <div className="chat-error" role="alert">{chatError}</div>}
           <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">{sending ? "Tarea en curso…" : "↵ enviar · ⇧↵ nueva línea"}</span><button className="send-button" onClick={() => void sendMessage()} aria-label="Enviar mensaje">↑</button></div></div>

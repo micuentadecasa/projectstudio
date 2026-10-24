@@ -13,7 +13,7 @@ const environment = Object.fromEntries(
 const app = await electron.launch({
   args: [main],
   cwd: root,
-  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_OMP_MODE: "emulator" },
+  env: { ...environment, ELECTRON_IS_DEV: "0" },
 });
 try {
   const window = await app.firstWindow();
@@ -26,16 +26,16 @@ try {
   await window.screenshot({ path: resolve(evidenceDirectory, "F04-T01-desktop-chat-light.png"), fullPage: true });
   await window.getByTitle("C4 y escenarios").click();
   await window.getByRole("heading", { name: "Arquitectura" }).waitFor();
-  await window.getByLabel("Mensaje para OMP").fill("¿Qué componentes tiene este proyecto?");
+  await window.getByLabel("Mensaje para OMP").fill("Responde exclusivamente con OMP_REAL_OK y no uses herramientas.");
   await window.getByRole("button", { name: "Enviar mensaje" }).click();
-  await window.getByText("fixture complete").waitFor();
-  await window.screenshot({ path: resolve(evidenceDirectory, "F04-T02-desktop-chat-live.png"), fullPage: true });
+  await window.getByText("OMP_REAL_OK").waitFor({ timeout: 120_000 });
+  await window.screenshot({ path: resolve(evidenceDirectory, "F04-T03-desktop-chat-real.png"), fullPage: true });
 
   const result = {
     title: await window.title(),
     activeSection: await window.locator("h1").innerText(),
     theme: await window.locator(".app-shell").getAttribute("class"),
-    screenshots: ["docs/implementation/evidence/F04-T01-desktop-chat-dark.png", "docs/implementation/evidence/F04-T01-desktop-chat-light.png", "docs/implementation/evidence/F04-T02-desktop-chat-live.png"],
+    screenshots: ["docs/implementation/evidence/F04-T01-desktop-chat-dark.png", "docs/implementation/evidence/F04-T01-desktop-chat-light.png", "docs/implementation/evidence/F04-T03-desktop-chat-real.png"],
   };
   console.log(JSON.stringify(result, null, 2));
 } finally {

@@ -52,8 +52,8 @@ Salida requerida:
 - Host tool mínima con `host_tool_call`/`host_tool_result`.
 - `steer`, `follow_up`, `abort` y estados del adaptador.
 - Sesión lógica con `sessionKey`, cwd/profile/session-dir explícitos.
-- Emulador determinista y probe del binario real documentado.
-- Si el binario real carece de modelo, el bloqueo queda explícito; no se acepta el emulador como sustituto.
+- Probe del binario OMP real documentado y ejecutado con la configuración del usuario.
+- Si el binario real carece de modelo, el bloqueo queda explícito y el proceso se detiene.
 - `STATUS.md` en `WAITING_USER_APPROVAL`.
 
 Decisión humana: `APPROVED`, `CHANGES_REQUESTED` o `REJECTED`. El silencio no aprueba.
@@ -64,10 +64,8 @@ Entrada: aprobación continua del usuario y Fase 04.
 
 Salida requerida:
 
-- IPC Electron aislado entre renderer, preload y proceso OMP.
-- Chat visible con modo emulador claramente etiquetado.
+- Chat visible conectado al OMP real instalado y autenticado.
 - Eventos parciales y final (`message_update`, `message_end`) visibles.
 - Estados `ready`, `streaming`, `settled` y errores visibles.
-- Modo real configurable por `PROJECTSTUDIO_OMP_MODE=real`.
-- E2E con mensaje enviado desde la UI y respuesta recibida.
+- E2E con mensaje enviado desde la UI y respuesta recibida del proceso real.
 - Captura visual posterior a la respuesta.

@@ -6,7 +6,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(currentDirectory, "../../..");
 const adapterModuleUrl = pathToFileURL(join(projectRoot, "dist/packages/omp-bridge/src/omp-adapter.js")).href;
-const chatMode = process.env.PROJECTSTUDIO_OMP_MODE === "emulator" ? "emulator" : "real";
 
 type AdapterEvent = Record<string, unknown>;
 type ChatAdapter = {
@@ -29,17 +28,11 @@ let chatAdapter: ChatAdapter | undefined;
 let chatStart: Promise<void> | undefined;
 
 function adapterArguments(): { command: string; args: string[] } {
-  if (chatMode === "real") {
-    const sessionDirectory = join(projectRoot, ".tmp", "omp-sessions");
-    mkdirSync(sessionDirectory, { recursive: true });
-    return {
-      command: process.env.OMP_BIN ?? "omp",
-      args: ["--mode", "rpc", "--session-dir", sessionDirectory, "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--cwd", projectRoot],
-    };
-  }
+  const sessionDirectory = join(projectRoot, ".tmp", "omp-sessions");
+  mkdirSync(sessionDirectory, { recursive: true });
   return {
-    command: process.execPath,
-    args: [join(projectRoot, "tests/fixtures/omp-rpc-emulator.mjs")],
+    command: process.env.OMP_BIN ?? "omp",
+    args: ["--mode", "rpc", "--session-dir", sessionDirectory, "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--cwd", projectRoot],
   };
 }
 
@@ -72,7 +65,7 @@ async function startChat(): Promise<{ mode: string; status: string }> {
     });
   }
   await chatStart;
-  return { mode: chatMode, status: adapter.status };
+  return { mode: "real", status: adapter.status };
 }
 
 function installChatIpc(): void {
@@ -80,7 +73,7 @@ function installChatIpc(): void {
     try {
       return await startChat();
     } catch (error) {
-      return { mode: chatMode, status: "failed", error: error instanceof Error ? error.message : String(error) };
+      return { mode: "real", status: "failed", error: error instanceof Error ? error.message : String(error) };
     }
   });
   ipcMain.handle("studio:chat:send", async (_event, message: unknown) => {

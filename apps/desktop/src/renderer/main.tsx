@@ -1,6 +1,7 @@
 import React, { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import { visibleTextDelta } from "./chat-events.js";
 
 type Section = "Resumen" | "ProductShape" | "Arquitectura" | "Evidencia" | "Cambios";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
@@ -18,18 +19,6 @@ const initialMessages: Message[] = [
   { author: "omp", text: "En esta fase puedes explorar el proyecto demo y navegar por sus vistas." },
 ];
 
-function stringField(frame: Record<string, unknown>, name: string): string | undefined {
-  const value = frame[name];
-  return typeof value === "string" ? value : undefined;
-}
-
-function messageDelta(frame: Record<string, unknown>): string | undefined {
-  const direct = stringField(frame, "delta") ?? stringField(frame, "text");
-  if (direct) return direct;
-  const nested = frame.assistantMessageEvent;
-  if (typeof nested !== "object" || nested === null) return undefined;
-  return stringField(nested as Record<string, unknown>, "delta") ?? stringField(nested as Record<string, unknown>, "text");
-}
 
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
@@ -38,7 +27,7 @@ function App(): JSX.Element {
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [activeTab, setActiveTab] = useState("Resumen");
-  const [chatMode, setChatMode] = useState("emulator");
+  const [chatMode, setChatMode] = useState("real");
   const [chatStatus, setChatStatus] = useState("starting");
   const [chatError, setChatError] = useState("");
   const [sending, setSending] = useState(false);
@@ -50,7 +39,7 @@ function App(): JSX.Element {
       } else if (event.type === "ready") {
         setChatStatus("ready");
       } else if (event.type === "message_update") {
-        const delta = messageDelta(event.frame);
+        const delta = visibleTextDelta(event.frame);
         if (!delta) return;
         setMessages((current) => {
           const last = current[current.length - 1];
@@ -229,7 +218,7 @@ function App(): JSX.Element {
         </main>
 
         <aside className="chat-panel" aria-label="Chat OMP">
-          <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">{chatMode === "real" ? "REAL" : "EMULADOR"}</span></div><div className="chat-context">contexto: {section.toLowerCase()} · {chatStatus}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
+          <div className="chat-header"><div><div className="chat-title"><span className="omp-orbit">✦</span> OMP <span className="chat-live">REAL</span></div><div className="chat-context">contexto: {section.toLowerCase()} · {chatStatus}</div></div><button className="quiet-button" aria-label="Opciones del chat">•••</button></div>
           <div className="chat-messages" aria-live="polite">
             <div className="chat-date">HOY · SESIÓN RPC</div>
             {messages.map((message, index) => <div className={`message-row ${message.author}`} key={`${message.author}-${index}`}><div className="message-avatar">{message.author === "omp" ? "✦" : "LC"}</div><div className={`message-bubble ${message.streaming ? "streaming" : ""}`}><div className="message-author">{message.author === "omp" ? "OMP" : "TÚ"}</div>{message.text || (message.streaming ? "…" : "")}</div></div>)}

@@ -1,6 +1,6 @@
 # ProjectStudio
 
-Shell de escritorio Electron + React para ProjectStudio. La implementación actual corresponde a **Fase 04**: chat visible conectado al adaptador OMP RPC v2. OMP instalado y autenticado es un requisito del usuario; la app no hace fallback silencioso al emulador.
+Shell de escritorio Electron + React para ProjectStudio. La implementación actual corresponde a **Fase 04**: chat visible conectado al adaptador OMP RPC v2. OMP instalado y autenticado es un requisito del usuario; no hay fallback silencioso ni emulador en producto o verificaciones.
 
 ## Requisitos
 
@@ -68,26 +68,18 @@ Tests y smoke específicos:
 ```bash
 pnpm test:f03
 pnpm spike:omp-adapter
-pnpm spike:omp-adapter --real
-pnpm test:e2e:real
+pnpm spike:omp
+pnpm test:e2e
 ```
 
-El smoke de Playwright abre Electron, envía un mensaje por IPC y genera capturas reales en:
+El smoke de Playwright usa el OMP instalado y autenticado por el usuario. Genera capturas reales en:
 
 ```text
 docs/implementation/evidence/F04-T01-desktop-chat-dark.png
 docs/implementation/evidence/F04-T01-desktop-chat-light.png
-docs/implementation/evidence/F04-T02-desktop-chat-live.png
 docs/implementation/evidence/F04-T03-desktop-chat-real.png
 ```
 
-El smoke E2E usa el emulador únicamente para ser determinista y lo fuerza explícitamente:
-
-```bash
-PROJECTSTUDIO_OMP_MODE=emulator pnpm test:e2e
-```
-
-Ese emulador no es el modo de producto. Para cambiar el binario OMP real:
 
 ```bash
 OMP_BIN=/ruta/a/omp pnpm desktop

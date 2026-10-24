@@ -10,12 +10,12 @@ Sustituir la respuesta demo local por eventos RPC: `message_update`, `message_en
 
 ## F04-T03 — modo ejecutable
 
-Usar el OMP instalado/configurado por el usuario como modo normal. El emulador sólo se permite mediante `PROJECTSTUDIO_OMP_MODE=emulator` en tests reproducibles. `OMP_BIN` permite seleccionar otro binario sin cambiar el renderer.
+Usar el OMP instalado/configurado por el usuario como modo normal y único modo de ejecución. `OMP_BIN` permite seleccionar otro binario sin cambiar el renderer.
 
 ## F04-T04 — evidencia
 
-Ejecutar Playwright con mensaje real atravesando renderer → preload → Electron main → OmpAdapter → OMP real y vuelta. Mantener además un smoke emulado determinista.
+Ejecutar Playwright con mensaje real atravesando renderer → preload → Electron main → OmpAdapter → OMP real y vuelta. No se usa un sustituto simulado.
 
 ## F04-T05 — gate
 
-Actualizar estado y continuar automáticamente con el siguiente slice aprobado por el usuario. El modo emulador siempre queda etiquetado; no se presenta como compatibilidad real.
+Actualizar estado y continuar automáticamente con el siguiente slice aprobado por el usuario. El proceso OMP real y los errores de configuración quedan visibles; no se ocultan.

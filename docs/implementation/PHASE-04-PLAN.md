@@ -10,11 +10,11 @@ Sustituir la respuesta demo local por eventos RPC: `message_update`, `message_en
 
 ## F04-T03 — modo ejecutable
 
-Usar el emulador determinista por defecto para una demo local reproducible. Permitir `PROJECTSTUDIO_OMP_MODE=real` y `OMP_BIN` para probar el binario real sin cambiar el renderer.
+Usar el OMP instalado/configurado por el usuario como modo normal. El emulador sólo se permite mediante `PROJECTSTUDIO_OMP_MODE=emulator` en tests reproducibles. `OMP_BIN` permite seleccionar otro binario sin cambiar el renderer.
 
 ## F04-T04 — evidencia
 
-Ejecutar Playwright con mensaje real atravesando renderer → preload → Electron main → OmpAdapter → emulador y vuelta. Capturar la respuesta visible.
+Ejecutar Playwright con mensaje real atravesando renderer → preload → Electron main → OmpAdapter → OMP real y vuelta. Mantener además un smoke emulado determinista.
 
 ## F04-T05 — gate
 

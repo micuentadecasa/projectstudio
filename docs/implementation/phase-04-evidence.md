@@ -10,7 +10,7 @@ React renderer
   → Electron ipcMain
   → OmpAdapter
   → RpcClient
-  → emulador OMP RPC v2
+  → OMP real (default) or emulator (tests only)
   → eventos IPC
   → mensajes visibles en React
 ```
@@ -24,6 +24,7 @@ React renderer
 | F04-T03 | done | `apps/desktop/src/renderer/renderer.d.ts` | eventos tipados en el renderer |
 | F04-T04 | done | `tests/e2e/desktop-smoke.ts` | mensaje enviado y `fixture complete` recibido |
 | F04-T05 | done | capturas PNG | dark/light y respuesta visible |
+| F04-T06 | done | `tests/e2e/desktop-real-chat.ts` | OMP real desde Electron: 3 mensajes y `OMP_REAL_OK` |
 
 ## Comando reproducible
 
@@ -32,7 +33,13 @@ pnpm build:all
 pnpm test:e2e
 ```
 
-Salida observada:
+Smoke Electron con OMP real:
+
+```bash
+pnpm test:e2e:real
+```
+
+Salida del smoke emulado:
 
 ```json
 {
@@ -47,18 +54,36 @@ Salida observada:
 }
 ```
 
-La captura `F04-T02-desktop-chat-live.png` muestra el mensaje del usuario y la respuesta `fixture complete` con estado `settled`.
+Salida del smoke Electron real:
 
-## Modo real
-
-El renderer soporta:
-
-```bash
-PROJECTSTUDIO_OMP_MODE=real pnpm desktop
+```json
+{
+  "mode": "real",
+  "responseMessages": 3,
+  "screenshot": "docs/implementation/evidence/F04-T03-desktop-chat-real.png"
+}
 ```
 
-Ese modo usa `omp` o el binario indicado por `OMP_BIN`. La máquina actual sigue bloqueada antes de `ready` por `No default model selected`; la UI muestra el error y no lo confunde con el emulador.
+`F04-T02` muestra el emulador. `F04-T03` muestra OMP real, la pregunta del usuario, la respuesta `OMP_REAL_OK` y estado `settled`.
 
-## Limitación
+## Configuración OMP requerida
 
-La respuesta visible de la captura es del emulador determinista, no de un modelo remoto. La ruta de producción queda preparada para el binario real, pero su prueba funcional depende de configurar un modelo autorizado.
+El modo normal del producto usa el OMP instalado por el usuario:
+
+```bash
+omp --version
+omp login
+pnpm desktop
+```
+
+El usuario debe dejar un modelo seleccionado/configurado en OMP. ProjectStudio reutiliza la configuración global y no crea un perfil vacío ni gestiona credenciales.
+
+El modo emulador existe sólo para tests deterministas:
+
+```bash
+PROJECTSTUDIO_OMP_MODE=emulator pnpm test:e2e
+```
+
+La captura visual `F04-T02-desktop-chat-live.png` sigue siendo evidencia del circuito UI/IPC con emulador; no se presenta como respuesta de un modelo real.
+
+La compatibilidad real necesitó leer `message_update.assistantMessageEvent.delta`; los deltas no llegan siempre en `frame.delta`. La prueba Electron real cubre esta forma de wire.

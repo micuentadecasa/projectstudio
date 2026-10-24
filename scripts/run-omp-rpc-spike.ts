@@ -6,7 +6,7 @@ const emulator = join(root, "tests/fixtures/omp-rpc-emulator.mjs");
 const real = process.argv.includes("--real");
 const command = real ? (process.env.OMP_BIN ?? "omp") : process.execPath;
 const args = real
-  ? ["--mode", "rpc", "--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--profile", "projectstudio-phase00", "--cwd", root]
+  ? ["--mode", "rpc", "--no-session", "--no-tools", "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--cwd", root]
   : [emulator];
 const client = new RpcClient();
 const stderr: string[] = [];

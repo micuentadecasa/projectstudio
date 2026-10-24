@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(currentDirectory, "../../..");
 const adapterModuleUrl = pathToFileURL(join(projectRoot, "dist/packages/omp-bridge/src/omp-adapter.js")).href;
-const chatMode = process.env.PROJECTSTUDIO_OMP_MODE === "real" ? "real" : "emulator";
+const chatMode = process.env.PROJECTSTUDIO_OMP_MODE === "emulator" ? "emulator" : "real";
 
 type AdapterEvent = Record<string, unknown>;
 type ChatAdapter = {
@@ -21,7 +21,7 @@ type AdapterConstructor = new (options: {
   args: string[];
   cwd: string;
   sessionKey: string;
-  hostTools: Array<{ name: string; description: string; handler: () => Promise<unknown> }>;
+  hostTools: Array<{ name: string; description: string; parameters: Record<string, unknown>; handler: () => Promise<unknown> }>;
 }) => ChatAdapter;
 
 let mainWindow: BrowserWindow | undefined;
@@ -34,7 +34,7 @@ function adapterArguments(): { command: string; args: string[] } {
     mkdirSync(sessionDirectory, { recursive: true });
     return {
       command: process.env.OMP_BIN ?? "omp",
-      args: ["--mode", "rpc", "--profile", "projectstudio-phase04", "--session-dir", sessionDirectory, "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--cwd", projectRoot],
+      args: ["--mode", "rpc", "--session-dir", sessionDirectory, "--no-extensions", "--no-skills", "--no-rules", "--no-ui", "--cwd", projectRoot],
     };
   }
   return {
@@ -55,6 +55,7 @@ async function getChatAdapter(): Promise<ChatAdapter> {
     hostTools: [{
       name: "studio_task_progress",
       description: "Registra progreso interno de una tarea de ProjectStudio.",
+      parameters: { type: "object", properties: { step: { type: "string" } }, additionalProperties: false },
       handler: async () => ({ accepted: true }),
     }],
   });

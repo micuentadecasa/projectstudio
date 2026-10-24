@@ -18,6 +18,7 @@
     "test:e2e": "tsx tests/e2e/desktop-smoke.ts",
     "test:f02": "vitest run tests/studio-graph.test.ts",
     "test:f04": "pnpm build:all && pnpm test:e2e",
+    "test:e2e:real": "pnpm build:all && tsx tests/e2e/desktop-real-chat.ts",
     "spike:omp": "tsx scripts/run-omp-rpc-spike.ts",
     "spike:omp:real": "tsx scripts/run-omp-rpc-spike.ts --real",
     "spike:langgraph": "tsx scripts/run-langgraph-sqlite-spike.ts",

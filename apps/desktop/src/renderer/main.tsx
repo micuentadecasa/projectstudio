@@ -23,6 +23,14 @@ function stringField(frame: Record<string, unknown>, name: string): string | und
   return typeof value === "string" ? value : undefined;
 }
 
+function messageDelta(frame: Record<string, unknown>): string | undefined {
+  const direct = stringField(frame, "delta") ?? stringField(frame, "text");
+  if (direct) return direct;
+  const nested = frame.assistantMessageEvent;
+  if (typeof nested !== "object" || nested === null) return undefined;
+  return stringField(nested as Record<string, unknown>, "delta") ?? stringField(nested as Record<string, unknown>, "text");
+}
+
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("Resumen");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -42,7 +50,7 @@ function App(): JSX.Element {
       } else if (event.type === "ready") {
         setChatStatus("ready");
       } else if (event.type === "message_update") {
-        const delta = stringField(event.frame, "delta") ?? stringField(event.frame, "text");
+        const delta = messageDelta(event.frame);
         if (!delta) return;
         setMessages((current) => {
           const last = current[current.length - 1];

@@ -4,7 +4,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("studio", {
   phase: "04",
   runtime: "electron",
-  omp: "emulator",
+  omp: "real",
   chat: {
     start: () => ipcRenderer.invoke("studio:chat:start"),
     send: (message) => ipcRenderer.invoke("studio:chat:send", message),

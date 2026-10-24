@@ -13,7 +13,7 @@ const environment = Object.fromEntries(
 const app = await electron.launch({
   args: [main],
   cwd: root,
-  env: { ...environment, ELECTRON_IS_DEV: "0" },
+  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_OMP_MODE: "emulator" },
 });
 try {
   const window = await app.firstWindow();

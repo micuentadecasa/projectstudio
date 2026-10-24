@@ -23,6 +23,7 @@ El usuario autorizó continuar sin pausas entre gates. Fase 04 queda implementad
 | F04-T03 | done | tipos/estilos | `renderer.d.ts`, `styles.css` |
 | F04-T04 | done | integración | renderer → IPC → OmpAdapter → RPC → renderer |
 | F04-T05 | done | evidencia | `F04-T01-desktop-chat-*.png`, `F04-T02-desktop-chat-live.png` |
+| F04-T06 | done | OMP real | `tests/e2e/desktop-real-chat.ts`, `F04-T03-desktop-chat-real.png` |
 
 ## Flujo funcionando
 
@@ -32,12 +33,12 @@ textarea React
   → ipcMain
   → OmpAdapter
   → RpcClient
-  → emulador OMP RPC v2
+  → OMP real (modo normal) / emulador (tests explícitos)
   → message_update/message_end
   → chat visible
 ```
 
-La respuesta `fixture complete` aparece en la UI después de enviar una pregunta desde Playwright. El emulador queda etiquetado como `EMULADOR`; no se presenta como modelo real.
+El producto requiere que el usuario tenga OMP instalado, autenticado y con modelo configurado. No se crea un perfil aislado sin credenciales ni se hace fallback silencioso al emulador.
 
 ## Verificación automatizada
 
@@ -46,49 +47,55 @@ La respuesta `fixture complete` aparece en la UI después de enviar una pregunta
 | `pnpm build:all` | pass | renderer y main Electron compilados |
 | `pnpm lint` | pass | ESLint sin errores |
 | `pnpm test` | pass | 5 archivos, 11 tests |
-| `pnpm test:e2e` | pass | mensaje enviado y `fixture complete` visible |
+| `pnpm test:e2e` | pass | mensaje enviado con `PROJECTSTUDIO_OMP_MODE=emulator` y `fixture complete` visible |
 | `pnpm test:f03` | pass | adapter RPC v2 y ciclo de sesión |
-| `pnpm spike:omp-adapter` | pass | emulador: ready, streaming, host tool, settled |
-| `pnpm spike:omp-adapter --real` | blocked | OMP real sin modelo configurado |
+| `pnpm spike:omp-adapter` | pass | emulador explícito: ready, streaming, host tool, settled |
+| `pnpm spike:omp-adapter --real` | pass | OMP real: ready, streaming, message_end, prompt_result, session_settled |
+| `pnpm test:e2e:real` | pass | Electron real: 3 mensajes OMP y captura `F04-T03-desktop-chat-real.png` |
 
 ## Evidencia visual
 
 - `docs/implementation/evidence/F04-T01-desktop-chat-dark.png`
 - `docs/implementation/evidence/F04-T01-desktop-chat-light.png`
 - `docs/implementation/evidence/F04-T02-desktop-chat-live.png`
+- `docs/implementation/evidence/F04-T03-desktop-chat-real.png`
 
-La última captura muestra `¿Qué componentes tiene este proyecto?` y la respuesta `fixture complete` en el panel OMP, con estado `settled`.
+`F04-T02` muestra `fixture complete` con emulador. `F04-T03` muestra OMP real, `OMP_REAL_OK` y estado `settled`.
 
 ## Cómo ejecutarlo
 
-Modo reproducible local, por defecto:
+OMP es requisito del usuario:
+
+```bash
+omp --version
+omp login
+```
+
+Después deja un modelo seleccionado/configurado en OMP y ejecuta:
 
 ```bash
 pnpm desktop
 ```
 
-Modo real, cuando exista un modelo autorizado:
+El modo normal inicia `omp --mode rpc` usando la configuración global del usuario, cwd del proyecto y session directory de ProjectStudio.
+
+Para tests deterministas únicamente:
 
 ```bash
-PROJECTSTUDIO_OMP_MODE=real pnpm desktop
+PROJECTSTUDIO_OMP_MODE=emulator pnpm test:e2e
 ```
 
-Se puede seleccionar otro binario con:
+Se puede seleccionar otro binario real con:
 
 ```bash
-OMP_BIN=/ruta/a/omp PROJECTSTUDIO_OMP_MODE=real pnpm desktop
+OMP_BIN=/ruta/a/omp pnpm desktop
 ```
 
-## Bloqueo real conocido
+## Hallazgos corregidos
 
-El binario local `omp/18.12.6` sigue terminando antes de `ready`:
-
-```text
-No default model selected.
-Use /login, set an API key environment variable, or select a local model with /model or --model.
-```
-
-No se modificaron credenciales. El modo emulador sirve para validar el circuito visual y de eventos; no sustituye la validación del modelo real.
+1. El arranque anterior usaba `--profile projectstudio-phase04`, un perfil nuevo sin modelo. Se eliminó; ahora se reutiliza la configuración OMP del usuario.
+2. La host tool real requería descripción no vacía y `parameters` como JSON Schema object. El adapter y el proceso Electron ya los envían.
+3. El probe real final pasó: `ready`, negociación v2, streaming, `message_end`, `prompt_result` y `session_settled`.
 
 ## Fases anteriores
 

@@ -21,6 +21,9 @@ try {
   await window.waitForFunction(() => Array.from(document.querySelectorAll(".project-picker select option")).some((option) => option.textContent?.includes("notes")), undefined, { timeout: 30_000 });
   await window.getByTitle("Producto y casos de uso").click();
   await window.getByRole("heading", { name: "ProductShape" }).waitFor();
+  await window.getByRole("heading", { name: "Lo que va encontrando" }).waitFor();
+  if (await window.locator(".assistant-findings .activity-row").count() === 0) throw new Error("Stored ProductShape report did not produce assistant findings");
+  await window.getByText("EVIDENCIA GUARDADA").waitFor();
   await window.locator(".generated-system-map .diagram-canvas").waitFor({ timeout: 30_000 });
   const source = await window.locator(".generated-system-map .diagram-canvas").innerText();
   if (!source.includes("MuScriptor") || !source.includes("SQLite")) throw new Error(`Stored ProductShape diagram is incomplete: ${source}`);

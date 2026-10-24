@@ -27,6 +27,19 @@ Terminar con:
 | 7. Preguntar | Escribe una pregunta concreta en el composer derecho | Respuesta contextual al proyecto activo | Mismo CommandBus/workflow, no canal directo | La respuesta conserva el contexto del proyecto |
 | 8. Retomar | Cierra, vuelve a abrir o selecciona un proyecto archivado | Registro, cwd y señales reconstruidos | `.tmp/projectstudio-projects.json` + detector | El repo no se ha borrado ni modificado por archivar |
 
+## ProductShape asistido: qué hace el usuario y qué hace el asistente
+
+El usuario no opera el CLI ni debe leer el repositorio entero. Su recorrido es:
+
+1. Abre el repositorio y confirma que las señales detectadas corresponden al proyecto.
+2. Deja que el asistente arranque el descubrimiento o pulsa **Revisar y diagramar** si quiere repetirlo.
+3. Lee **Lo que va encontrando**: propósito, actores, casos de uso, restricciones y rutas de evidencia. Cada tarjeta es un resumen de una salida real de OMP, no una actividad decorativa.
+4. Mira el mapa provisional que se publica junto con el resultado. Puede volver a una revisión anterior mientras decide si el hallazgo es correcto.
+5. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.
+
+Durante el análisis, la aplicación muestra la etapa y permite seguir navegando. Cuando llega una respuesta útil, crea una revisión temporal del diagrama; no genera una revisión por cada token ni sustituye un modelo aceptado.
+
+
 ## Reglas de producto
 
 1. El saludo debe sugerir el primer trabajo útil. `Listo. Elige un objetivo` sin acciones visibles no es suficiente.

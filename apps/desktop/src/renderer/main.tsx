@@ -4,6 +4,34 @@ import "./styles.css";
 import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
+type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
+type AssistantFinding = { id: string; title: string; detail: string; evidence?: string };
+
+function extractAssistantFindings(text: string): AssistantFinding[] {
+  const withoutDiagram = text.replace(/```[\s\S]*?```/g, "");
+  const normalized = withoutDiagram.replace(/\s+(?=#{1,3}\s+)/g, "\n");
+  const lines = normalized.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const findings: AssistantFinding[] = [];
+  for (let index = 0; index < lines.length && findings.length < 4; index += 1) {
+    const heading = /^(?:#{1,3}\s+|\*\*)(.+?)(?:\*\*)?$/.exec(lines[index]);
+    const bullet = /^[-*]\s+(.+)$/.exec(lines[index]);
+    if (!heading && !bullet) continue;
+    const rawTitle = (heading?.[1] ?? bullet?.[1] ?? "").trim();
+    const normalizedTitle = rawTitle.replace(/\*\*/g, "").trim();
+    const contentBoundary = /\s+(?=Se tomó|El |La |Los |Las |Después |Verificación |Incluye |Usa |Para )/.exec(rawTitle)?.index ?? Number.POSITIVE_INFINITY;
+    const emphasisBoundary = rawTitle.search(/\s+\*\*/);
+    const boundary = Math.min(contentBoundary, emphasisBoundary >= 0 ? emphasisBoundary : Number.POSITIVE_INFINITY);
+    const title = (boundary >= 0 ? normalizedTitle.slice(0, boundary) : normalizedTitle).trim();
+    if (!title) continue;
+    const inlineDetail = boundary >= 0 ? normalizedTitle.slice(boundary).trim() : "";
+    const detail = inlineDetail || lines.slice(index + 1).find((line) => !/^(?:#{1,3}\s+|\*\*|[-*]\s+)/.test(line))?.replace(/\*\*/g, "").trim();
+    const evidence = /(?:[\w./-]+\.(?:md|tsx?|py|json))(?:[:#]\d+(?:-\d+)?)?/.exec(`${title} ${detail ?? ""}`)?.[0];
+    findings.push({ id: `${Date.now()}-${findings.length}`, title, detail: (detail ?? "Hallazgo publicado por el asistente.").slice(0, 180), evidence });
+  }
+  if (findings.length > 0) return findings;
+  const summary = withoutDiagram.replace(/\s+/g, " ").trim();
+  return summary ? [{ id: `${Date.now()}-summary`, title: "Resultado de la revisión", detail: summary.slice(0, 180) }] : [];
+}
 
 const navigation: Array<{ section: Section; icon: string; detail: string }> = [
   { section: "Resumen", icon: "⌂", detail: "Vista del proyecto" },
@@ -97,6 +125,9 @@ function App(): JSX.Element {
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [storedDiagram, setStoredDiagram] = useState<string | null>(null);
+  const [diagramRevisions, setDiagramRevisions] = useState<DiagramRevision[]>([]);
+  const [selectedDiagramRevisionId, setSelectedDiagramRevisionId] = useState<string | null>(null);
+  const [assistantFindings, setAssistantFindings] = useState<AssistantFinding[]>([]);
   const [activeTab, setActiveTab] = useState("Resumen");
   const [chatMode, setChatMode] = useState("real");
   const [chatStatus, setChatStatus] = useState("starting");
@@ -119,6 +150,15 @@ function App(): JSX.Element {
     }
     const analysis = await window.studio.project.analysis();
     setStoredDiagram(analysis.mermaid);
+    setAssistantFindings(analysis.report ? extractAssistantFindings(analysis.report) : []);
+    if (analysis.mermaid) {
+      const revision: DiagramRevision = { id: "stored-analysis", source: analysis.mermaid, label: "Mapa guardado", status: "stored", createdAt: "evidencia existente" };
+      setDiagramRevisions([revision]);
+      setSelectedDiagramRevisionId(revision.id);
+    } else {
+      setDiagramRevisions([]);
+      setSelectedDiagramRevisionId(null);
+    }
     const result = await window.studio.chat.start();
     setChatMode(result.mode);
     setChatStatus(result.status);
@@ -155,6 +195,19 @@ function App(): JSX.Element {
         streamingDraft.current = "";
         if (text) {
           setMessages((current) => [...current, { author: "omp", text }]);
+          setAssistantFindings((current) => [...extractAssistantFindings(text), ...current].slice(0, 8));
+          const source = extractMermaid(text);
+          if (source) {
+            const revision: DiagramRevision = {
+              id: `revision-${Date.now()}`,
+              source,
+              label: "Vista provisional",
+              status: "provisional",
+              createdAt: "acabada de generar",
+            };
+            setDiagramRevisions((current) => [...current, revision].slice(-12));
+            setSelectedDiagramRevisionId(revision.id);
+          }
           setActivity("Hallazgos preparados");
         }
       } else if (event.type === "session_settled") {
@@ -186,10 +239,11 @@ function App(): JSX.Element {
     () => navigation.find((item) => item.section === section) ?? navigation[0],
     [section],
   );
-  const latestDiagram = useMemo(
-    () => [...messages].reverse().map((message) => extractMermaid(message.text)).find((source): source is string => Boolean(source)) ?? storedDiagram,
-    [messages, storedDiagram],
+  const selectedDiagramRevision = useMemo(
+    () => diagramRevisions.find((revision) => revision.id === selectedDiagramRevisionId) ?? diagramRevisions.at(-1),
+    [diagramRevisions, selectedDiagramRevisionId],
   );
+  const latestDiagram = selectedDiagramRevision?.source ?? [...messages].reverse().map((message) => extractMermaid(message.text)).find((source): source is string => Boolean(source)) ?? storedDiagram;
   function workflowForSection(currentSection: Section): "brownfield-discovery" | "architecture-documentation" | "architecture-planning" {
     return currentSection === "ProductShape" ? "brownfield-discovery" : "architecture-documentation";
   }
@@ -375,7 +429,8 @@ function App(): JSX.Element {
             </section>
             <section className="dashboard-grid">
               <article className="panel-card architecture-card">
-                <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? "MAPA CONFIRMADO POR OMP" : "ARQUITECTURA · INSPECCIÓN REAL"}</div><h2>{latestDiagram ? "Diagrama del proyecto" : "Mapa del sistema"}</h2></div><button className="more-button" aria-label="Más opciones">•••</button></div>
+                <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "VISTA PROVISIONAL · PRODUCTSHAPE" : "EVIDENCIA GUARDADA") : "PRODUCTSHAPE · INSPECCIÓN REAL"}</div><h2>{latestDiagram ? "Mapa que está construyendo el asistente" : "Mapa pendiente de evidencia"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
+                {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones temporales del diagrama">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
                 {latestDiagram
                   ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div>
                   : <div className="system-map">
@@ -389,13 +444,14 @@ function App(): JSX.Element {
                 <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); void sendMessage(reviewPrompt("Arquitectura")); }}>Pedir diagrama real <span>→</span></button>
               </article>
               <article className="panel-card activity-card">
-                <div className="card-heading"><div><div className="card-kicker">ACTIVIDAD</div><h2>Últimos hallazgos</h2></div><span className="live-badge"><span /> LIVE</span></div>
-                <div className="activity-list">
-                  <div className="activity-row"><span className="activity-dot blue" /><div><strong>Pipeline de audio identificado</strong><small>evidencia · hace 4 min</small></div><span className="activity-arrow">↗</span></div>
-                  <div className="activity-row"><span className="activity-dot purple" /><div><strong>Vista C4 provisional creada</strong><small>arquitectura · hace 8 min</small></div><span className="activity-arrow">↗</span></div>
-                  <div className="activity-row"><span className="activity-dot green" /><div><strong>Tests importados del repo</strong><small>verificación · hace 12 min</small></div><span className="activity-arrow">↗</span></div>
+                <div className="card-heading"><div><div className="card-kicker">ASISTENTE DE PRODUCTSHAPE</div><h2>Lo que va encontrando</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "TRABAJANDO" : "SESIÓN"}</span></div>
+                <div className="assistant-findings" aria-live="polite">
+                  {sending && <div className="assistant-stage"><span className="activity-dot purple" /><div><strong>Revisando el proyecto</strong><small>{activity}. El siguiente hallazgo aparecerá aquí.</small></div></div>}
+                  {assistantFindings.length > 0
+                    ? assistantFindings.slice(0, 4).map((finding, index) => <div className="activity-row" key={finding.id}><span className={`activity-dot ${index % 2 === 0 ? "blue" : "purple"}`} /><div><strong>{finding.title}</strong><small>{finding.detail}{finding.evidence ? ` · ${finding.evidence}` : ""}</small></div><span className="activity-arrow">↗</span></div>)
+                    : !sending && <div className="assistant-empty"><strong>El asistente todavía no ha publicado hallazgos.</strong><small>Inicia «Revisar y diagramar» para que lea ProductShape y lo contraste con el código.</small></div>}
                 </div>
-                <button className="card-link" onClick={() => setSection("Evidencia")}>Ver timeline <span>→</span></button>
+                <button className="card-link" onClick={() => setSection("Evidencia")}>Ver evidencia del análisis <span>→</span></button>
               </article>
             </section>
           </div>

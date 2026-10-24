@@ -236,13 +236,15 @@ async function startChat(): Promise<{ mode: string; status: string; projectName:
   await chatStart;
   return { mode: "real", status: "ready", projectName, projectRoot };
 }
-async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null }> {
-  if (projectName !== "notes") return { projectName, mermaid: null };
+async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null }> {
+  if (projectName !== "notes") return { projectName, mermaid: null, report: null };
   try {
-    const mermaid = await readFile(join(workspaceRoot, "docs", "implementation", "evidence", "F05-T01-notes-productshape-cli.mermaid"), "utf8");
-    return { projectName, mermaid: mermaid.trim() || null };
+    const evidenceDirectory = join(workspaceRoot, "docs", "implementation", "evidence");
+    const mermaid = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-cli.mermaid"), "utf8");
+    const report = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-real.md"), "utf8");
+    return { projectName, mermaid: mermaid.trim() || null, report: report.trim() || null };
   } catch {
-    return { projectName, mermaid: null };
+    return { projectName, mermaid: null, report: null };
   }
 }
 type DiscoveryStatus = "running" | "completed" | "failed";

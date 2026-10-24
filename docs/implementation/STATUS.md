@@ -123,6 +123,8 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T13 | done | discovery interrumpido se marca reanudable; no deja objetivos bloqueados por un marcador stale |
 | F05-T14 | done | escenarios humanos: proyecto existente, referencia nueva, discovery activo, cola de objetivo y error OMP comprensible |
 | F05-T15 | done | estado/progreso de ProductShape subido encima del contenido principal |
+| F05-T16 | done | panel `Lo que va encontrando` deriva hallazgos del informe real y conserva rutas de evidencia |
+| F05-T17 | done | diagramas almacenados se distinguen de revisiones `provisional`; el usuario puede volver a una revisión temporal |
 ### Verificación F05
 
 ```bash
@@ -150,6 +152,16 @@ pnpm test:e2e:journey:scenarios
 Resultado observado: `existing-notes`, `new-project-reference`, `active-discovery-queues-objective` y `omp-error` pasan. El caso OMP ausente muestra una instrucción accionable y no expone `ENOENT`.
 
 La captura `F05-T06-notes-stored-diagram.png` confirma que el estado `Siguiente paso recomendado` aparece inmediatamente bajo el breadcrumb de `ProductShape`, antes del hero, métricas y diagrama.
+El recorrido asistido de ProductShape también se comprobó con el artefacto real almacenado:
+
+```bash
+pnpm test:e2e:notes:diagram
+```
+
+Resultado observado: el panel `Lo que va encontrando` muestra hallazgos derivados de `F05-T01-notes-productshape-real.md`, mantiene rutas como `docs/product/README.md:3-15` y distingue el diagrama como `EVIDENCIA GUARDADA`. No consumió tokens.
+
+ADR asociado: `docs/adr/ADR-025-productshape-assistant-revisions.md`.
+
 
 Para iterar el renderer sin consumir otra respuesta OMP:
 ```bash

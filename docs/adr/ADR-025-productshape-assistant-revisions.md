@@ -12,7 +12,7 @@ El resultado inicial no es todavía el ProductShape canónico ni una arquitectur
 ## Decisión
 
 1. El workflow `brownfield-discovery` sigue siendo el único que invoca OMP. El renderer no llama a OMP ni muestra prompts, frames RPC o razonamiento interno.
-2. Cada respuesta final que contenga Mermaid publica una revisión `provisional` en la superficie ProductShape. Las revisiones se conservan en memoria durante la sesión y el usuario puede volver a una revisión anterior.
+2. Cada bloque Mermaid reconocible durante el streaming o en la respuesta final publica/actualiza una revisión `provisional` en la superficie ProductShape. Las revisiones se conservan en memoria durante la sesión y el usuario puede volver a una revisión anterior.
 3. Un artefacto previamente almacenado se muestra como `evidencia guardada`, separado de las revisiones provisionales nuevas.
 4. El panel **Lo que va encontrando** deriva tarjetas breves del informe OMP y conserva rutas de evidencia cuando están presentes. No inventa hallazgos estáticos.
 5. El estado visible distingue `trabajando`, `hallazgos preparados` y `listo`; la interfaz puede seguir usándose mientras OMP continúa.

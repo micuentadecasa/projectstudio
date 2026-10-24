@@ -8,6 +8,10 @@ describe("diagramas Mermaid del chat", () => {
     expect(extractMermaid("Hallazgo\n```mermaid\nflowchart LR\nA[API] --> B[DB]\n```"))
       .toBe("flowchart LR\nA[API] --> B[DB]");
   });
+  it("extrae el Mermaid aunque el stream todavía no haya cerrado el fence", () => {
+    expect(extractMermaid("Hallazgo parcial\n```mermaid\nflowchart LR\nA[API] --> B[DB]"))
+      .toBe("flowchart LR\nA[API] --> B[DB]");
+  });
 
   it("convierte nodos y relaciones en datos renderizables", () => {
     expect(parseMermaid("flowchart LR\nA[API] --> B[DB]")).toEqual({

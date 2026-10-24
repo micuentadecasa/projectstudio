@@ -28,7 +28,7 @@ try {
   const source = await window.locator(".generated-system-map .diagram-canvas").innerText();
   if (!source.includes("MuScriptor") || !source.includes("SQLite")) throw new Error(`Stored ProductShape diagram is incomplete: ${source}`);
   const screenshot = "docs/implementation/evidence/F05-T06-notes-stored-diagram.png";
-  await window.screenshot({ path: resolve(root, screenshot), fullPage: false });
+  await window.screenshot({ path: resolve(root, screenshot), fullPage: true });
   await writeFile(resolve(evidenceDirectory, "F05-T06-notes-stored-diagram.md"), `${source}\n`, "utf8");
   console.log(JSON.stringify({ mode: "real", projectRoot: notesRoot, tokensUsed: false, screenshot, source }, null, 2));
 } finally {

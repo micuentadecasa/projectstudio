@@ -34,10 +34,11 @@ El usuario no opera el CLI ni debe leer el repositorio entero. Su recorrido es:
 1. Abre el repositorio y confirma que las señales detectadas corresponden al proyecto.
 2. Deja que el asistente arranque el descubrimiento o pulsa **Revisar y diagramar** si quiere repetirlo.
 3. Lee **Lo que va encontrando**: propósito, actores, casos de uso, restricciones y rutas de evidencia. Cada tarjeta es un resumen de una salida real de OMP, no una actividad decorativa.
-4. Mira el mapa provisional que se publica junto con el resultado. Puede volver a una revisión anterior mientras decide si el hallazgo es correcto.
-5. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.
+4. Cuando el stream identifica una sección de casos de uso, la interfaz anuncia **Nuevo caso de uso** y añade el hallazgo al timeline vivo.
+5. Mira el mapa provisional, que puede aparecer antes de que termine el mensaje si el bloque Mermaid ya está disponible. El canvas ocupa el área principal y conserva revisiones anteriores.
+6. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.
 
-Durante el análisis, la aplicación muestra la etapa y permite seguir navegando. Cuando llega una respuesta útil, crea una revisión temporal del diagrama; no genera una revisión por cada token ni sustituye un modelo aceptado.
+Durante el análisis, la aplicación muestra la etapa y permite seguir navegando. El timeline entra con una transición breve y mantiene un pulso mientras OMP trabaja; no genera una revisión por cada token ni sustituye un modelo aceptado.
 
 
 ## Reglas de producto

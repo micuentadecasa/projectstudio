@@ -5,7 +5,7 @@ import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
-type AssistantFinding = { id: string; title: string; detail: string; evidence?: string };
+type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; live?: boolean };
 
 function extractAssistantFindings(text: string): AssistantFinding[] {
   const withoutDiagram = text.replace(/```[\s\S]*?```/g, "");
@@ -31,6 +31,18 @@ function extractAssistantFindings(text: string): AssistantFinding[] {
   if (findings.length > 0) return findings;
   const summary = withoutDiagram.replace(/\s+/g, " ").trim();
   return summary ? [{ id: `${Date.now()}-summary`, title: "Resultado de la revisión", detail: summary.slice(0, 180) }] : [];
+}
+function detectLiveFinding(text: string): AssistantFinding | undefined {
+  const heading = /(?:^|\n)\s*#{1,4}\s*(?:\d+\.\s*)?(Casos de uso principales|Actores|Propósito y frontera del producto|Bounded contexts|Reglas e invariantes|Restricciones)/im.exec(text);
+  const useCase = /(?:^|\n)\s*#{1,4}\s*(?:[A-F]\.\s*)?(Importar material|Ejecutar el worker local|Persistir material de práctica|Explorar biblioteca y revisiones|Practicar un score activo|Coaching contextual)/im.exec(text);
+  const label = useCase?.[1] ?? heading?.[1];
+  if (!label) return undefined;
+  return {
+    id: `live-${label}`,
+    title: useCase ? `Nuevo caso de uso: ${label}` : `Nuevo hallazgo: ${label}`,
+    detail: "El asistente acaba de identificarlo; el mapa provisional se actualizará con esta evidencia.",
+    live: true,
+  };
 }
 
 const navigation: Array<{ section: Section; icon: string; detail: string }> = [
@@ -137,6 +149,17 @@ function App(): JSX.Element {
   const streamingDraft = useRef("");
   const [sending, setSending] = useState(false);
   const queuedObjective = useRef<{ prompt: string; workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning" } | null>(null);
+  const streamingRevisionId = useRef<string | null>(null);
+  function publishStreamingDiagram(source: string): void {
+    const revisionId = streamingRevisionId.current ?? `streaming-${Date.now()}`;
+    streamingRevisionId.current = revisionId;
+    const revision: DiagramRevision = { id: revisionId, source, label: "Vista provisional en directo", status: "provisional", createdAt: "generándose ahora" };
+    setDiagramRevisions((current) => {
+      const existing = current.some((candidate) => candidate.id === revisionId);
+      return existing ? current.map((candidate) => candidate.id === revisionId ? revision : candidate) : [...current, revision].slice(-12);
+    });
+    setSelectedDiagramRevisionId(revisionId);
+  }
 
   async function reloadProjectSurface(): Promise<void> {
     setChatError("");
@@ -186,7 +209,13 @@ function App(): JSX.Element {
         setActivity("Listo para continuar");
       } else if (event.type === "message_update") {
         const delta = visibleTextDelta(event.frame);
-        if (delta) streamingDraft.current += delta;
+        if (delta) {
+          streamingDraft.current += delta;
+          const source = extractMermaid(streamingDraft.current);
+          if (source) publishStreamingDiagram(source);
+          const liveFinding = detectLiveFinding(streamingDraft.current);
+          if (liveFinding) setAssistantFindings((current) => current.some((finding) => finding.id === liveFinding.id) ? current : [liveFinding, ...current].slice(0, 8));
+        }
         setActivity("OMP está analizando el proyecto…");
       } else if (event.type === "host_tool_call") {
         setActivity("ProjectStudio está preparando una actualización…");
@@ -195,19 +224,10 @@ function App(): JSX.Element {
         streamingDraft.current = "";
         if (text) {
           setMessages((current) => [...current, { author: "omp", text }]);
-          setAssistantFindings((current) => [...extractAssistantFindings(text), ...current].slice(0, 8));
+          setAssistantFindings((current) => [...extractAssistantFindings(text), ...current.filter((finding) => !finding.live)].slice(0, 8));
           const source = extractMermaid(text);
-          if (source) {
-            const revision: DiagramRevision = {
-              id: `revision-${Date.now()}`,
-              source,
-              label: "Vista provisional",
-              status: "provisional",
-              createdAt: "acabada de generar",
-            };
-            setDiagramRevisions((current) => [...current, revision].slice(-12));
-            setSelectedDiagramRevisionId(revision.id);
-          }
+          if (source) publishStreamingDiagram(source);
+          streamingRevisionId.current = null;
           setActivity("Hallazgos preparados");
         }
       } else if (event.type === "session_settled") {
@@ -269,6 +289,7 @@ function App(): JSX.Element {
     setMessages((current) => [...current, { author: "user", text }]);
     setChatInput("");
     setChatError("");
+    streamingRevisionId.current = null;
     setSending(true);
     setActivity("Preparando la tarea…");
     try {
@@ -427,19 +448,16 @@ function App(): JSX.Element {
               <article className="metric-card"><div className="metric-label">EVIDENCIAS</div><div className="metric-value">12</div><div className="metric-note">último hallazgo hace 4 min</div></article>
               <article className="metric-card"><div className="metric-label">CAMBIOS PENDIENTES</div><div className="metric-value">02</div><div className="metric-note warning">requieren revisión</div></article>
             </section>
-            <section className="dashboard-grid">
+            <section className={`dashboard-grid ${section === "ProductShape" ? "productshape-dashboard" : ""}`}>
               <article className="panel-card architecture-card">
                 <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "VISTA PROVISIONAL · PRODUCTSHAPE" : "EVIDENCIA GUARDADA") : "PRODUCTSHAPE · INSPECCIÓN REAL"}</div><h2>{latestDiagram ? "Mapa que está construyendo el asistente" : "Mapa pendiente de evidencia"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
                 {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones temporales del diagrama">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
                 {latestDiagram
                   ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div>
-                  : <div className="system-map">
-                    <div className="map-node user-node"><span>◉</span><strong>Proyecto seleccionado</strong><small>cwd del OMP real</small></div>
-                    <div className="map-line line-one" />
-                    <div className="map-node app-node"><span>✦</span><strong>OMP RPC</strong><small>análisis bajo demanda</small></div>
-                    <div className="map-line line-two" />
-                    <div className="map-node service-node"><span>⌘</span><strong>Diagrama pendiente</strong><small>usa el botón superior</small></div>
-                    <div className="map-badge">sin inventar componentes</div>
+                  : <div className="system-map diagram-placeholder">
+                    <span className="placeholder-icon">{sending ? "◌" : "◇"}</span>
+                    <strong>{sending ? "El asistente está construyendo el mapa…" : "Todavía no hay un diagrama publicado"}</strong>
+                    <small>{sending ? "Aparecerá en cuanto OMP entregue una relación coherente." : "Revisa y diagramar iniciará una inspección con evidencia real."}</small>
                   </div>}
                 <button className="card-link" onClick={() => { setSection("Arquitectura"); setActiveTab("Arquitectura"); void sendMessage(reviewPrompt("Arquitectura")); }}>Pedir diagrama real <span>→</span></button>
               </article>

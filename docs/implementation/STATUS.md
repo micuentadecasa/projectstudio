@@ -125,6 +125,8 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T15 | done | estado/progreso de ProductShape subido encima del contenido principal |
 | F05-T16 | done | panel `Lo que va encontrando` deriva hallazgos del informe real y conserva rutas de evidencia |
 | F05-T17 | done | diagramas almacenados se distinguen de revisiones `provisional`; el usuario puede volver a una revisión temporal |
+| F05-T18 | done | Mermaid se publica desde el streaming antes de cerrar el fence; el fallback comunica cuándo aún no hay diagrama |
+| F05-T19 | done | panel ProductShape reordenado como timeline vivo; diagrama ocupa el ancho principal y anuncia casos de uso nuevos durante streaming |
 ### Verificación F05
 
 ```bash
@@ -134,6 +136,8 @@ pnpm spike:notes:productshape
 Resultado observado: pass. El CLI de OMP real trabajó con `projectRoot=/Users/luis/projects/notes`, estado `settled`, protocolo 2, respuesta de 15.075 caracteres y Mermaid extraído de 1.207 caracteres.
 
 `pnpm test:f04` pasó con Electron real: el worker LangGraph invocó OMP, la respuesta final llegó al chat y no se filtró el prompt interno.
+`pnpm exec tsx tests/e2e/notes-brownfield.ts` pasó con OMP real: ProductShape respondió, el chat mostró el Mermaid y el canvas recibió el diagrama. La prueba cubre además arquitectura posterior y dejó capturas F05-T01/F05-T02.
+
 
 Verificación visual del artefacto persistido, sin enviar prompt ni consumir tokens:
 
@@ -169,6 +173,8 @@ pnpm vitest run tests/diagrams.test.ts
 ```
 
 El test de diagramas reutiliza `F05-T01-notes-productshape-cli.mermaid`.
+La regresión de streaming se cubre con `tests/diagrams.test.ts`: un bloque Mermaid sin fence de cierre ya se puede renderizar como vista provisional.
+
 
 Evidencia:
 

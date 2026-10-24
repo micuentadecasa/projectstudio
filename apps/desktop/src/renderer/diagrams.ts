@@ -4,7 +4,7 @@ export type MermaidDiagram = { nodes: DiagramNode[]; edges: DiagramEdge[] };
 export type LayoutNode = DiagramNode & { x: number; y: number; width: number; height: number; lines: string[] };
 export type DiagramLayout = { width: number; height: number; nodes: LayoutNode[]; edges: DiagramEdge[] };
 
-const fencedMermaid = /```mermaid\s*\n([\s\S]*?)```/i;
+const fencedMermaid = /```mermaid\s*\n([\s\S]*?)(?:```|$)/i;
 const nodePattern = /([A-Za-z0-9_-]+)\s*(?:\[\[([^\]]+)\]\]|\[([^\]]+)\]|\(\(([^)]+)\)\)|\(([^)]+)\)|\{\{([^}]+)\}\}|\{([^}]+)\})/g;
 const edgePattern = /([A-Za-z0-9_-]+)(?:\s*(?:\[\[[^\]]+\]\]|\[[^\]]+\]|\(\([^)]+\)\)|\([^)]+\)|\{\{[^}]+\}\}|\{[^}]+\}))?\s*(?:-->|-.->|==>)\s*(?:\|[^|]*\|\s*)?([A-Za-z0-9_-]+)/g;
 

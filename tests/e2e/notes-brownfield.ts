@@ -18,8 +18,8 @@ const app = await electron.launch({
 });
 try {
   const window = await app.firstWindow();
-  await window.waitForFunction(() => document.querySelector<HTMLSelectElement>(".project-picker select")?.value.startsWith("notes"), undefined, { timeout: 30_000 });
-  const selectedProject = await window.locator(".project-picker select").inputValue();
+  await window.waitForFunction(() => document.querySelector<HTMLSelectElement>(".project-picker select option:checked")?.textContent?.startsWith("notes"), undefined, { timeout: 30_000 });
+  const selectedProject = await window.locator(".project-picker select option:checked").innerText();
   if (!selectedProject.startsWith("notes")) throw new Error(`unexpected project label: ${selectedProject}`);
 
   await window.getByTitle("Producto y casos de uso").click();

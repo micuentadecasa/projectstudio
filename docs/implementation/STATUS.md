@@ -9,7 +9,7 @@ branch: main
 gate: F07-REAL-OMP-PDAC-CANVAS
 userDecision: APPROVED
 nextPhase: '07'
-latestVerifiedCommit: pending
+latestVerifiedCommit: ac3947f
 manualVerification: required
 ```
 F07 implementa timer de personalidad, modo autónomo exclusivo de pruebas, persistencia ProductShape como verdad del proyecto, promoción estructurada OMP → drafts PDAC → CLI ProductShape, lienzos Tldraw offline y verificación DOM/estática. No se hizo push.
@@ -354,4 +354,4 @@ Verificación observada:
 - `pnpm lint`: pass.
 - `docs/product/` contiene 9 archivos y la detección de señales del proyecto ahora puede encontrar `docs/product`.
 
-El test unitario completo sigue con el fallo previo de `tests/agent-runtime.test.ts`: espera texto de personalidad antiguo y no está relacionado con este cambio documental.
+La suite actual `pnpm test` pasa: 9 archivos y 19 tests, incluidos los tests RPC y adapter OMP reales.

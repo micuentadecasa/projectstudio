@@ -23,6 +23,16 @@ try {
   await window.getByText(/He cargado \d+ elementos del PDAC que vive en el proyecto/).waitFor({ timeout: 30_000 });
   await window.locator(".pdac-artifact-nav").waitFor();
   await window.locator(".pdac-details-card").waitFor();
+  const expectedArtifactCounts: Record<string, number> = { Actores: 4, "Casos de uso": 6, Dominio: 13, Journeys: 4, "Bounded contexts": 4 };
+  for (const [label, count] of Object.entries(expectedArtifactCounts)) {
+    const button = window.getByRole("button", { name: label, exact: true });
+    const title = await button.getAttribute("title");
+    if (!title?.includes(`${count} hallazgo`)) throw new Error(`Notes no hidrata ${label}: ${title ?? "sin contador"}`);
+  }
+  for (const label of ["Reglas", "Requisitos"]) {
+    const title = await window.getByRole("button", { name: label, exact: true }).getAttribute("title");
+    if (!title || !/[1-9]\d* hallazgo/.test(title)) throw new Error(`Notes no hidrata ${label}: ${title ?? "sin contador"}`);
+  }
   if (await window.locator(".welcome-strip").count() !== 0) throw new Error("ProductShape still shows the duplicated upper status");
   const contentScroll = window.locator(".content-scroll");
   const scrollMetrics = await contentScroll.evaluate((element) => ({ scrollHeight: element.scrollHeight, clientHeight: element.clientHeight }));
@@ -39,9 +49,9 @@ try {
   await window.getByText("GLOSARIO DEL DOMINIO · EVIDENCIA", { exact: true }).waitFor();
   await window.locator(".pdac-tldraw-stage").waitFor();
   await window.getByRole("button", { name: "← Estado general" }).click();
-  await window.locator(".generated-system-map .diagram-canvas").waitFor({ timeout: 30_000 });
-  const source = await window.locator(".generated-system-map .diagram-canvas").innerText();
-  if (!source.includes("MuScriptor") || !source.includes("SQLite")) throw new Error(`Stored ProductShape diagram is incomplete: ${source}`);
+  await window.locator(".pdac-tldraw-stage").waitFor();
+  const source = await window.locator(".pdac-workbench").innerText();
+  if (!source.includes("MuScriptor") || !source.includes("SQLite")) throw new Error(`Stored ProductShape inventory is incomplete: ${source}`);
   const screenshot = "docs/implementation/evidence/F05-T06-notes-stored-diagram.png";
   await window.screenshot({ path: resolve(root, screenshot), fullPage: true });
   await writeFile(resolve(evidenceDirectory, "F05-T06-notes-stored-diagram.md"), `${source}\n`, "utf8");

@@ -1,0 +1,19 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+const renderer = await readFile(resolve(import.meta.dirname, "../apps/desktop/src/renderer/main.tsx"), "utf8");
+const contracts: Array<[string, RegExp]> = [
+  ["chat status observable", /data-chat-status=\{chatStatus\}/],
+  ["proactive target observable", /data-proactive-target=\{personalityStatus === "working" \? activeProactiveTarget\?\.label/],
+  ["canvas uses persisted PDAC node IDs", /nodeIdForFinding\(finding\)/],
+  ["suggestions disabled while working", /disabled=\{suggestionsLocked\}/],
+  ["focus canvas receives only filtered findings", /page=\{pdacPage\} findings=\{visibleFindings\}/],
+  ["long detail list limited to overview", /pdacPage === "overview" && <article className="panel-card pdac-details-card">/],
+  ["settled clears proactive target", /event\.type === "session_settled"[\s\S]{0,220}setActiveProactiveTarget\(null\)/],
+];
+const missing = contracts.filter(([, pattern]) => !pattern.test(renderer)).map(([name]) => name);
+if (missing.length > 0) {
+  console.error(JSON.stringify({ ok: false, missing }, null, 2));
+  process.exit(1);
+}
+console.log(JSON.stringify({ ok: true, launchesApp: false, contracts: contracts.map(([name]) => name) }, null, 2));

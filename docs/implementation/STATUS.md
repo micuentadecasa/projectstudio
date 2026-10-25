@@ -14,7 +14,10 @@ latestVerifiedCommit: c5ea228
 manualVerification: required
 ```
 El flujo F07 valida OMP real, personalidad con temporizador, persistencia de proyecto y lienzos Tldraw no vacíos después de cada actividad OMP. Esta iteración queda preparada para revisión manual; no se hizo push.
+Esta iteración añade una capa determinista inspirada en verification-skill-example: primero se validan manifiesto, grafo persistido y contratos de UI leyendo archivos; no se lanza Electron ni se invoca OMP. El runtime real queda reservado para las comprobaciones que necesitan DOM, IPC, Tldraw o semántica generada por el modelo.
 El usuario pidió commits directos a `main`, sin push, y continuar sin pausas entre gates.
+Notes quedó deliberadamente sin `.product/` ni `docs/product/` para iniciar el siguiente smoke como Greenfield; la copia reversible está en `/Users/luis/projects/notes-pdac-backup-202603/`.
+La ejecución real pendiente no es sustituible por lectura estática: hay que volver a crear el PDAC con OMP, aprobar focos y comprobar visualmente cada lienzo.
 
 ## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
 
@@ -27,6 +30,10 @@ El usuario pidió commits directos a `main`, sin push, y continuar sin pausas en
 | F07-T05 | done | edición Tldraw → PDAC | edición humana del shape actualiza `.product/generated/product-graph.json`; escrituras serializadas |
 | F07-T06 | done | reanudación | cierre y reapertura restauran proyecto y foco PDAC |
 | F07-T07 | done | manual | README documenta OMP real, timer, persistencia y edición del lienzo |
+| F07-T08 | done | verificación sin app | `.cursor/skills/verify-projectstudio/`, `scripts/verify-pdac-static.ts`, `scripts/verify-pdac-scenarios.ts`; no Electron ni tokens |
+| F07-T09 | done | contrato UI estático | `scripts/verify-ui-contract.ts`; timer, target elegido, botones bloqueados y canvas filtrado |
+| F07-T10 | done | foco de artefacto | Actores y demás pantallas de foco muestran el canvas filtrado; el detalle largo queda sólo en Resumen |
+| F07-T11 | pending-manual | reejecución real | requiere una sesión OMP real para crear de nuevo el PDAC de Notes desde Greenfield; no se lanza por esta iteración |
 
 ### Evidencia y límite conocido
 
@@ -36,13 +43,13 @@ El usuario pidió commits directos a `main`, sin push, y continuar sin pausas en
 
 ### Checklist manual F07
 
-- [ ] Ejecutar `omp --version` y `omp login`; dejar un modelo configurado en OMP.
-- [ ] Lanzar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm desktop`; abrir ProductShape y elegir temporizador `10 s`.
-- [ ] Escribir una pregunta sin enviarla y esperar más de 10 s: no debe arrancar OMP ni desaparecer el texto pendiente.
-- [ ] Vaciar el composer; esperar la cuenta atrás, comprobar un único estado visible, actividad OMP y respuesta asentada en el chat.
-- [ ] Tras una respuesta OMP asentada, visitar cada botón PDAC: cada lienzo debe mostrar figuras visibles; si Tldraw tarda, debe aparecer la recuperación editable y no un canvas en blanco.
-- [ ] Editar el título de una figura y comprobar que `.product/generated/product-graph.json` cambia; cerrar y abrir la app para confirmar proyecto, foco y edición.
-- [ ] Revisar `docs/implementation/evidence/F07-personality-timer-01-countdown.png`, `F07-personality-timer-02-working.png` y una captura `F07-pdac-matrix-20/*-artifact-*.png`.
+- [x] Ejecutar `pnpm verify:pdac:scenarios`; matriz determinista 20 escenarios, 10 Greenfield y 10 Brownfield.
+- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-greenfield`; Notes no contiene PDAC persistido.
+- [x] Ejecutar `pnpm verify:ui:static`, `pnpm typecheck`, `pnpm typecheck:desktop`, `pnpm lint` y `git diff --check`.
+- [ ] Con OMP real, iniciar la entrevista Greenfield de Notes; aprobar cada foco y comprobar que cada aprobación escribe el grafo.
+- [ ] En Actores, confirmar que se ve sólo el diagrama de actores y que el chat contiene la explicación.
+- [ ] Tras el timer, confirmar el mensaje `Sigo con ...`, target visible y botones deshabilitados durante el trabajo.
+- [ ] Cerrar/reabrir y ejecutar la lectura estática en modo Brownfield para verificar el grafo final.
 
 ## Fase 04 — chat OMP visible
 

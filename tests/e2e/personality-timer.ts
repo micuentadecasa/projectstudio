@@ -67,13 +67,20 @@ try {
   await composer.fill("");
   const previousMessages = await page.locator(".message-row.omp").count();
   await page.locator('[data-personality-status="working"]').waitFor({ timeout: 30_000 });
+  const proactiveAnnouncement = page.locator(".message-row.omp").filter({ hasText: /^Sigo con /i });
+  await proactiveAnnouncement.waitFor({ timeout: 5_000 });
+  const suggestions = page.locator('[aria-label="Objetivos sugeridos"]');
+  const suggestionButtons = suggestions.locator("button");
+  if (await suggestionButtons.count() < 1) throw new Error("La personalidad comenzó sin objetivos visibles en el chat");
+  if (await suggestionButtons.evaluateAll((buttons) => buttons.some((button) => !(button as HTMLButtonElement).disabled))) throw new Error("Los objetivos del chat siguen activos mientras la personalidad trabaja");
+  await page.locator('[data-proactive-target]').waitFor({ timeout: 5_000 });
   await page.screenshot({ path: resolve(root, "docs/implementation/evidence/F07-personality-timer-02-working.png"), fullPage: false });
   await waitForSettled(page, previousMessages);
   const chat = await page.locator(".chat-messages").innerText();
   if (/REVISIÓN PROACTIVA|PDAC COMPLETO|No inventes datos/i.test(chat)) throw new Error("El prompt interno de personalidad se filtró al chat");
-  await writeFile(resolve(root, "docs/implementation/evidence/F07-personality-timer-report.json"), `${JSON.stringify({ mode: "real-omp", threshold: "10s", countdownAdvances: firstCountdown !== secondCountdown, pendingComposerBlocksProactive: true, proactiveRunSettled: true, internalPromptHidden: true }, null, 2)}
+  await writeFile(resolve(root, "docs/implementation/evidence/F07-personality-timer-report.json"), `${JSON.stringify({ mode: "real-omp", threshold: "10s", countdownAdvances: firstCountdown !== secondCountdown, pendingComposerBlocksProactive: true, proactiveChoiceAnnounced: true, suggestionsDisabledDuringProactiveWork: true, proactiveRunSettled: true, internalPromptHidden: true }, null, 2)}
 `, "utf8");
-  console.log(JSON.stringify({ threshold: "10s", countdownAdvances: true, pendingComposerBlocksProactive: true, proactiveRunSettled: true, internalPromptHidden: true }));
+  console.log(JSON.stringify({ threshold: "10s", countdownAdvances: true, pendingComposerBlocksProactive: true, proactiveChoiceAnnounced: true, suggestionsDisabledDuringProactiveWork: true, proactiveRunSettled: true, internalPromptHidden: true }));
 } finally {
   await app?.close();
   await rm(userData, { recursive: true, force: true });

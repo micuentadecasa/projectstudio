@@ -258,7 +258,8 @@ async function startChat(): Promise<{ mode: string; status: string; projectName:
 }
 type ProjectPdacNode = { id?: string; type?: string; title?: string; status?: string; path?: string };
 type ProjectPdacEdge = { from?: string; to?: string; kind?: string };
-type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string };
+type ProjectPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string };
+type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string; artifacts: ProjectPdacArtifact[] };
 
 async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
   const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
@@ -308,7 +309,13 @@ async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
       }
     }
     const updatedAt = (await stat(graphPath)).mtime.toISOString();
-    return { report, mermaid, updatedAt };
+    const artifacts = graphNodes.map((node) => {
+      const artifact: ProjectPdacArtifact = { id: node.id, type: node.type ?? "artifact", title: node.title };
+      if (typeof node.status === "string") artifact.status = node.status;
+      if (typeof node.path === "string") artifact.path = node.path;
+      return artifact;
+    });
+    return { report, mermaid, updatedAt, artifacts };
   } catch {
     return null;
   }
@@ -348,11 +355,11 @@ function savePdacCanvasEdit(input: PdacCanvasEdit): Promise<{ nodeId: string; ti
   pdacEditQueue = result.then(() => undefined, () => undefined);
   return result;
 }
-async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }> {
+async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: ProjectPdacArtifact[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }> {
   const signature = await projectContentSignature();
   const projectPdac = await readProjectPdacTruth();
   if (projectPdac) {
-    return { projectName, mermaid: projectPdac.mermaid, report: projectPdac.report, updatedAt: projectPdac.updatedAt, stale: false, source: "project-pdac" };
+    return { projectName, mermaid: projectPdac.mermaid, report: projectPdac.report, artifacts: projectPdac.artifacts, updatedAt: projectPdac.updatedAt, stale: false, source: "project-pdac" };
   }
   try {
     const saved = JSON.parse(await readFile(projectAnalysisPath(), "utf8")) as StoredProjectAnalysis;

@@ -90,6 +90,27 @@ Los artefactos del proyecto analizado no se borran ni se escriben durante esta g
 12. Si OMP devuelve Mermaid, comprueba el mapa visual en chat y canvas central.
 13. En el chat inicial confirma que aparece la personalidad `Arquitecto de Proyecto` y los objetivos `Entender el proyecto` y `Documentar arquitectura`.
 14. Pulsa uno de esos objetivos o escribe una pregunta nueva en el composer visible del panel derecho.
+## Verificación determinista sin lanzar la aplicación
+
+La primera capa no abre Electron, no inicia OMP y no consume tokens:
+
+```bash
+pnpm verify:pdac:scenarios
+PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-greenfield
+pnpm verify:ui:static
+pnpm typecheck && pnpm typecheck:desktop && pnpm lint
+```
+
+`verify:pdac:scenarios` valida la matriz 10 Greenfield + 10 Brownfield. `verify:pdac:static` valida schema, nodos, relaciones, rutas de evidencia y ausencia de texto transitorio (`Objetivo actual`, `Hallazgo publicado`, prompts de revisión). `verify:ui:static` comprueba el contrato del renderer: foco filtrado, anuncio del timer, target elegido, botones deshabilitados y detalle largo sólo en el resumen.
+
+Notes está deliberadamente vacío de PDAC para reiniciar el journey como Greenfield. La copia reversible está fuera del proyecto:
+
+```text
+/Users/luis/projects/notes-pdac-backup-202603/
+```
+
+No se borró código fuente, tests ni cambios de trabajo de Notes.
+
 ## Verificar personalidad, persistencia y lienzos
 
 Las pruebas E2E usan OMP real; no hay mock de OMP. Requieren `omp login`, un modelo configurado y una red disponible para el proveedor:

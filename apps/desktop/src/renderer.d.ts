@@ -20,6 +20,7 @@ type StudioProject = {
   lastOpenedAt: string;
   detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
+type StudioPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string };
 type StudioProjectRegistry = { version: 1; activeId: string; projects: StudioProject[] };
 
 declare global {
@@ -35,7 +36,7 @@ declare global {
         archive: (id: string) => Promise<StudioProjectRegistry>;
       };
       project: {
-        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
+        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: StudioPdacArtifact[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
         saveAnalysis: (analysis: { report?: string | null; mermaid?: string | null }) => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt: string; sourceSignature: string }>;
         savePdacEdit: (edit: { nodeId?: string; page: string; title: string }) => Promise<{ nodeId: string; title: string; updatedAt: string }>;
         bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact" | "greenfield"; started: boolean; canResume?: boolean }>;

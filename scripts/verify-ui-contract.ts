@@ -2,7 +2,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const renderer = await readFile(resolve(import.meta.dirname, "../apps/desktop/src/renderer/main.tsx"), "utf8");
-const contracts: Array<[string, RegExp]> = [
+const main = await readFile(resolve(import.meta.dirname, "../apps/desktop/src/main.ts"), "utf8");
+const rendererContracts: Array<[string, RegExp]> = [
   ["chat status observable", /data-chat-status=\{chatStatus\}/],
   ["proactive target observable", /data-proactive-target=\{personalityStatus === "working" \? activeProactiveTarget\?\.label/],
   ["canvas uses persisted PDAC node IDs", /nodeIdForFinding\(finding\)/],
@@ -11,8 +12,18 @@ const contracts: Array<[string, RegExp]> = [
   ["focus canvas receives only filtered findings", /page=\{pdacPage\} findings=\{visibleFindings\}/],
   ["long detail list limited to overview", /pdacPage === "overview" && <article className="panel-card pdac-details-card">/],
   ["settled clears proactive target", /event\.type === "session_settled"[\s\S]{0,220}setActiveProactiveTarget\(null\)/],
+  ["autonomous mode is explicit", /data-recovery-mode=\{autonomousRecovery \? "autonomous-test" : "interactive"\}/],
+  ["OMP candidates promote through ProductShape", /promoteAutonomousCandidates\(candidates\)/],
 ];
-const missing = contracts.filter(([, pattern]) => !pattern.test(renderer)).map(([name]) => name);
+const mainContracts: Array<[string, RegExp]> = [
+  ["draft promotion writes ProductShape documents", /writeFile\(document\.path, document\.content/],
+  ["draft promotion recompiles ProductShape", /const result = await runProductShapeGraph\(\)/],
+];
+const missing = [
+  ...rendererContracts.filter(([, pattern]) => !pattern.test(renderer)),
+  ...mainContracts.filter(([, pattern]) => !pattern.test(main)),
+].map(([name]) => name);
+const contracts = [...rendererContracts, ...mainContracts];
 if (missing.length > 0) {
   console.error(JSON.stringify({ ok: false, missing }, null, 2));
   process.exit(1);

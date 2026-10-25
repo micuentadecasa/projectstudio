@@ -1,5 +1,5 @@
 import { _electron as electron } from "playwright";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -20,10 +20,14 @@ try {
   const window = await app.firstWindow();
   await window.waitForFunction(() => Array.from(document.querySelectorAll(".project-picker select option")).some((option) => option.textContent?.includes("notes")), undefined, { timeout: 30_000 });
   await window.getByTitle("Producto y casos de uso").click();
-  await window.getByText(/He cargado \d+ elementos del PDAC que vive en el proyecto/).waitFor({ timeout: 30_000 });
   await window.locator(".pdac-artifact-nav").waitFor();
-  await window.locator(".pdac-details-card").waitFor();
-  const expectedArtifactCounts: Record<string, number> = { Actores: 4, "Casos de uso": 6, Dominio: 13, Journeys: 4, "Bounded contexts": 4 };
+  const graph = JSON.parse(await readFile(resolve(notesRoot, ".product/generated/product-graph.json"), "utf8")) as { nodes?: Array<{ type?: string; title?: string; path?: string }> };
+  const canonicalNodes = graph.nodes?.filter((node) => node.path?.startsWith("docs/product/model/") && !node.path.endsWith("/canvas.md")) ?? [];
+  if (canonicalNodes.length !== 46) throw new Error(`Notes no hidrata el grafo canónico esperado: ${canonicalNodes.length} nodos`);
+  const counts = Object.fromEntries(["actor", "use-case", "domain-term", "journey", "business-rule", "constraint", "functional-requirement", "bounded-context"].map((type) => [type, canonicalNodes.filter((node) => node.type === type).length]));
+  const expectedCounts = { actor: 7, "use-case": 9, "domain-term": 8, journey: 2, "business-rule": 5, constraint: 5, "functional-requirement": 3, "bounded-context": 7 };
+  if (JSON.stringify(counts) !== JSON.stringify(expectedCounts)) throw new Error(`Conteos PDAC inesperados: ${JSON.stringify(counts)}`);
+  const expectedArtifactCounts: Record<string, number> = { Actores: 7, "Casos de uso": 9, Dominio: 8, Journeys: 2, "Bounded contexts": 7 };
   for (const [label, count] of Object.entries(expectedArtifactCounts)) {
     const button = window.getByRole("button", { name: label, exact: true });
     const title = await button.getAttribute("title");
@@ -45,17 +49,17 @@ try {
   await window.locator(".pdac-tldraw-stage").waitFor();
   const actorCanvasScreenshot = "docs/implementation/evidence/F05-T06-notes-actors-tldraw.png";
   await window.screenshot({ path: resolve(root, actorCanvasScreenshot), fullPage: true });
-  await window.getByRole("button", { name: /Dominio/ }).click();
+  await window.getByRole("button", { name: "Dominio", exact: true }).click();
   await window.getByText("GLOSARIO DEL DOMINIO · EVIDENCIA", { exact: true }).waitFor();
   await window.locator(".pdac-tldraw-stage").waitFor();
   await window.getByRole("button", { name: "← Estado general" }).click();
   await window.locator(".pdac-tldraw-stage").waitFor();
   const source = await window.locator(".pdac-workbench").innerText();
-  if (!source.includes("MuScriptor") || !source.includes("SQLite")) throw new Error(`Stored ProductShape inventory is incomplete: ${source}`);
+  if (!source.includes("Mapa") && !source.includes("Relaciones")) throw new Error(`Stored ProductShape inventory is incomplete: ${source}`);
   const screenshot = "docs/implementation/evidence/F05-T06-notes-stored-diagram.png";
   await window.screenshot({ path: resolve(root, screenshot), fullPage: true });
   await writeFile(resolve(evidenceDirectory, "F05-T06-notes-stored-diagram.md"), `${source}\n`, "utf8");
-  console.log(JSON.stringify({ mode: "real", projectRoot: notesRoot, tokensUsed: false, screenshot, source }, null, 2));
+  console.log(JSON.stringify({ mode: "real", projectRoot: notesRoot, tokensUsed: false, canonicalNodeCount: canonicalNodes.length, counts, screenshot, source }, null, 2));
 } finally {
   await app.close();
 }

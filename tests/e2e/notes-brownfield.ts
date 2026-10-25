@@ -1,5 +1,5 @@
 import { _electron as electron } from "playwright";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -14,14 +14,14 @@ const environment = Object.fromEntries(
 const app = await electron.launch({
   args: [main],
   cwd: root,
-  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_PROJECT_ROOT: notesRoot },
+  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_PROJECT_ROOT: notesRoot, PROJECTSTUDIO_AUTONOMOUS_RECOVERY: "1", PROJECTSTUDIO_SKIP_BOOTSTRAP: "1" },
 });
 try {
   const window = await app.firstWindow();
   await window.waitForFunction(() => document.querySelector<HTMLSelectElement>(".project-picker select option:checked")?.textContent?.startsWith("notes"), undefined, { timeout: 30_000 });
   const selectedProject = await window.locator(".project-picker select option:checked").innerText();
   if (!selectedProject.startsWith("notes")) throw new Error(`unexpected project label: ${selectedProject}`);
-
+  await window.locator('[data-chat-status="settled"], [data-chat-status="ready"]').waitFor({ timeout: 180_000 });
   await window.getByTitle("Producto y casos de uso").click();
   await window.locator(".pdac-artifact-nav").waitFor();
   const productShapeCount = await window.locator(".message-row.omp").count();
@@ -35,6 +35,9 @@ try {
   const productShapeMessage = window.locator(".message-row.omp").last();
   await productShapeMessage.waitFor({ timeout: 180_000 });
   await window.locator('[data-chat-status="settled"]').waitFor({ timeout: 180_000 });
+  const graph = JSON.parse(await readFile(resolve(notesRoot, ".product/generated/product-graph.json"), "utf8")) as { nodes?: Array<{ type?: string; title?: string; path?: string }> };
+  const canonicalNodes = graph.nodes?.filter((node) => node.path?.startsWith("docs/product/model/") && !node.path.endsWith("/canvas.md")) ?? [];
+  if (canonicalNodes.length === 0) throw new Error(`Autonomous recovery did not persist canonical ProductShape model nodes; extracted candidates=${await window.locator(".app-shell").getAttribute("data-pdac-candidate-count")}; textLength=${await window.locator(".app-shell").getAttribute("data-pdac-text-length")}`);
   const productShapeResponse = await productShapeMessage.innerText();
   if ((await productShapeMessage.locator(".chat-diagram").count()) !== 0) throw new Error("ProductShape duplicated the full Mermaid diagram in chat");
   if ((await productShapeMessage.locator(".chat-diagram-link").count()) !== 1) throw new Error("ProductShape response did not explain that the diagram moved to the central map");

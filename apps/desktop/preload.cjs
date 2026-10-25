@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld("studio", {
   project: {
     analysis: () => ipcRenderer.invoke("studio:project:analysis"),
     productshapeGraph: () => ipcRenderer.invoke("studio:project:productshape-graph"),
+    promotePdac: (candidates) => ipcRenderer.invoke("studio:project:pdac-promote", candidates),
+    recoveryPolicy: () => ipcRenderer.invoke("studio:project:recovery-policy"),
     savePdacEdit: (edit) => ipcRenderer.invoke("studio:project:pdac-edit", edit),
     bootstrap: (options) => ipcRenderer.invoke("studio:project:bootstrap", options),
   },

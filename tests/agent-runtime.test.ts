@@ -20,11 +20,10 @@ describe("runtime de agentes ProjectStudio", () => {
     );
 
     expect(state.status).toBe("completed");
-    expect(prompts[0]).toContain("Arquitecto de Proyecto de ProjectStudio");
+    expect(prompts[0]).toContain("Nombre: Arquitecto de Proyecto.");
     expect(prompts[0]).toContain("product managers y equipos de IT");
-    expect(prompts[0]).toContain("formula una sola pregunta breve");
+    expect(prompts[0]).toContain("termina con una única siguiente decisión útil");
     expect(prompts[0]).toContain("propuesta aislada de Architecture Lab");
     expect(prompts[0]).toContain("No muestres al usuario el protocolo RPC");
-    expect(prompts[0]).toContain("resumen breve de máximo 5 puntos");
 });
 });

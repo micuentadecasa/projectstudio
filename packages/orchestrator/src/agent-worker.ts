@@ -19,6 +19,17 @@ mkdirSync(sessionDirectory, { recursive: true });
 let adapter: OmpAdapter | undefined;
 let adapterStart: Promise<void> | undefined;
 let responseText = "";
+function textFromFrame(frame: Record<string, unknown>): string | undefined {
+  if (typeof frame.text === "string") return frame.text;
+  if (typeof frame.delta === "string") return frame.delta;
+  const nested = frame.assistantMessageEvent;
+  if (typeof nested === "object" && nested !== null) {
+    const nestedFrame = nested as Record<string, unknown>;
+    if (typeof nestedFrame.delta === "string" && (nestedFrame.type === undefined || nestedFrame.type === "text_delta")) return nestedFrame.delta;
+    if (typeof nestedFrame.text === "string") return nestedFrame.text;
+  }
+  return undefined;
+}
 
 function getAdapter(): OmpAdapter {
   if (adapter) return adapter;
@@ -36,14 +47,19 @@ function getAdapter(): OmpAdapter {
   });
   adapter.on("event", (event: OmpAdapterEvent) => {
     if (event.type === "message_update") {
-      const nested = event.frame.assistantMessageEvent;
-      const nestedFrame = typeof nested === "object" && nested !== null ? nested as Record<string, unknown> : undefined;
-      if (nestedFrame?.type === "text_delta" && typeof nestedFrame.delta === "string") responseText += nestedFrame.delta;
+      const delta = textFromFrame(event.frame);
+      if (delta) responseText += delta;
       send({ type: "event", event: { type: "message_update", frame: {} } });
       return;
     }
     if (event.type === "message_end") {
-      if (typeof event.frame.text === "string") responseText = event.frame.text;
+      const text = textFromFrame(event.frame);
+      if (text) responseText = text;
+      return;
+    }
+    if (event.type === "prompt_result") {
+      const text = textFromFrame(event.frame);
+      if (text) responseText = text;
       return;
     }
     if (event.type === "session_settled") {

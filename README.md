@@ -98,32 +98,41 @@ La primera capa no abre Electron, no inicia OMP y no consume tokens:
 pnpm verify:pdac:scenarios
 PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield
 pnpm verify:ui:static
+pnpm vitest run tests/pdac-recovery.test.ts
 pnpm typecheck && pnpm typecheck:desktop && pnpm lint
 ```
 
-`verify:pdac:scenarios` valida la matriz 10 Greenfield + 10 Brownfield. `verify:pdac:static` valida schema, nodos, relaciones, rutas de evidencia y ausencia de texto transitorio (`Objetivo actual`, `Hallazgo publicado`, prompts de revisión). `verify:ui:static` comprueba el contrato del renderer: foco filtrado, anuncio del timer, target elegido, botones deshabilitados y detalle largo sólo en el resumen.
+`tests/pdac-recovery.test.ts` es la prueba aislada del borde OMP → candidatos PDAC: valida JSON estructurado y fallback de viñetas sin Electron, sin ProductShape y sin tokens. Sirve para separar un fallo de extracción del fallo de entrega del runtime.
+
+`verify:pdac:scenarios` valida la matriz 10 Greenfield + 10 Brownfield. `verify:pdac:static` valida schema, nodos, relaciones, rutas de evidencia y ausencia de texto transitorio (`Objetivo actual`, `Hallazgo publicado`, prompts de revisión). `verify:ui:static` comprueba el contrato del renderer: foco filtrado, anuncio del timer, target elegido, botones deshabilitados, promoción ProductShape y detalle largo sólo en el resumen.
+
 Al pulsar un foco de artefacto, ProjectStudio intenta primero `prodshape graph --format json` con ProductShape `0.23.0`; sólo si el grafo no existe o está vacío delega la recuperación semántica a OMP. La CLI debe poder invocarse directamente o mediante `pnpm --package=@prodshape/cli@0.23.0 dlx prodshape`.
 
-Notes está deliberadamente vacío de PDAC, pero conserva código fuente visible; por eso es Brownfield sin modelo ProductShape, no Greenfield. La copia reversible está fuera del proyecto:
+La promoción autónoma de pruebas se activa sólo con `PROJECTSTUDIO_AUTONOMOUS_RECOVERY=1`. En ese modo, cada respuesta OMP estructurada se convierte en drafts ProductShape, se ejecuta `prodshape graph` y el timer sigue al siguiente foco sin esperar decisiones humanas. El modo normal no activa esa política.
+
+Notes conserva el código fuente visible y ahora tiene un grafo PDAC recuperado desde la evidencia de OMP real: 46 nodos `draft` en los ocho tipos ProductShape. La copia reversible del estado anterior permanece fuera del proyecto:
 
 ```text
 /Users/luis/projects/notes-pdac-backup-202603/
 ```
 
-No se borró código fuente, tests ni cambios de trabajo de Notes.
+Los drafts requieren revisión humana antes de pasar a `accepted` o `approved`; no se modificó código fuente ni tests de Notes.
 
 ## Verificar personalidad, persistencia y lienzos
 
-Las pruebas E2E usan OMP real; no hay mock de OMP. Requieren `omp login`, un modelo configurado y una red disponible para el proveedor:
+Las pruebas E2E de descubrimiento usan OMP real; no hay mock de OMP. Requieren `omp login`, un modelo configurado y una red disponible para el proveedor:
 
 ```bash
 pnpm test:e2e:personality-timer
 pnpm test:e2e:pdac-matrix-20
+PROJECTSTUDIO_NOTES_ROOT=/Users/luis/projects/notes pnpm exec tsx tests/e2e/notes-brownfield.ts
 ```
 
 `test:e2e:personality-timer` selecciona el umbral de 10 segundos, verifica que la cuenta atrás avanza, que el trabajo proactivo termina y que el prompt interno no aparece en el chat.
 
 `test:e2e:pdac-matrix-20` crea 10 proyectos greenfield y 10 brownfield temporales. En cada caso ejecuta OMP, abre los ocho focos PDAC, exige un lienzo no vacío al terminar la actividad, edita un nodo tldraw, comprueba que el título llega a `.product/generated/product-graph.json`, cierra/reabre Electron y verifica proyecto, foco y persistencia. Las carpetas temporales se eliminan al terminar.
+
+`test:e2e:pdac:promotion` no inicia OMP: crea una fixture, invoca el bridge real de promoción, ejecuta el ProductShape CLI, cierra/reabre Electron y comprueba que el canvas se hidrata desde el grafo canónico.
 
 Evidencia generada:
 

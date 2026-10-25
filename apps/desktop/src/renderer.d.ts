@@ -21,6 +21,7 @@ type StudioProject = {
   detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
 type StudioPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string };
+type StudioPdacCandidate = { type: "actor" | "use-case" | "domain-term" | "journey" | "business-rule" | "requirement" | "constraint" | "bounded-context"; title: string; detail: string; evidence?: string; confidence?: string; primaryActor?: string; definedIn?: string };
 type StudioProjectRegistry = { version: 1; activeId: string; projects: StudioProject[] };
 
 declare global {
@@ -38,6 +39,8 @@ declare global {
       project: {
         analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: StudioPdacArtifact[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
         productshapeGraph: () => Promise<{ ok: boolean; error?: string; artifacts?: StudioPdacArtifact[]; mermaid?: string | null }>;
+        promotePdac: (candidates: StudioPdacCandidate[]) => Promise<{ ok: boolean; created: number; error?: string; artifacts?: StudioPdacArtifact[]; mermaid?: string | null }>;
+        recoveryPolicy: () => Promise<{ autonomous: boolean }>;
         savePdacEdit: (edit: { nodeId?: string; page: string; title: string }) => Promise<{ nodeId: string; title: string; updatedAt: string }>;
         bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact" | "greenfield"; started: boolean; canResume?: boolean }>;
       };

@@ -5,12 +5,12 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
+import { extractPdacCandidates, pdacCandidateTypes, type PdacCandidate, type PdacCandidateType, type PdacPage } from "./pdac-recovery.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
 type FindingKind = "fact" | "inference" | "unknown";
-type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean };
+type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean; pdacType?: PdacCandidateType };
 type ProactiveTarget = { label: string };
-type PdacPage = "overview" | "use-cases" | "actors" | "domains" | "journeys" | "rules" | "requirements" | "contexts";
 type PdacFocus = "all" | "use-cases" | "actors" | "domains" | "journeys" | "rules" | "requirements" | "contexts";
 const pdacPageLabels: Record<PdacPage, string> = { overview: "ProductShape", "use-cases": "Casos de uso", actors: "Actores", domains: "Dominio", journeys: "Journeys", rules: "Reglas y restricciones", requirements: "Requisitos", contexts: "Bounded contexts" };
 const pdacArtifactTypeLabels: Record<string, string> = {
@@ -102,7 +102,9 @@ function findingsFromProjectArtifacts(artifacts: StudioPdacArtifact[]): Assistan
     const label = pdacArtifactTypeLabels[artifact.type] ?? artifact.type;
     const title = `${label}: ${artifact.title}`;
     const detail = `Estado ${artifact.status ?? "sin estado"} · evidencia ${artifact.path ?? "sin ruta"}`;
-    return { id: artifact.id, title, detail, evidence: artifact.path, kind: classifyFinding(title, detail) };
+    const artifactTypeMap: Record<string, PdacCandidateType | undefined> = { "functional-requirement": "requirement", "quality-requirement": "requirement" };
+    const pdacType = artifactTypeMap[artifact.type] ?? (pdacCandidateTypes[artifact.type as PdacCandidateType] ? artifact.type as PdacCandidateType : undefined);
+    return { id: artifact.id, title, detail, evidence: artifact.path, kind: classifyFinding(title, detail), pdacType };
   });
 }
 const domainTermNames = ["Song", "Instrument Part", "Practice Score Revision", "Import Bundle", "ImportJob", "Practice Score JSON", "MusicXML", "playback", "SQLite repository", "biblioteca local", "canción", "progreso de práctica"];
@@ -174,9 +176,9 @@ function readPersonalityIdleMs(): number {
   const configured = Number(localStorage.getItem(personalityIdleStorageKey));
   return personalityIdleOptions.includes(configured as (typeof personalityIdleOptions)[number]) ? configured : defaultPersonalityIdleMs;
 }
-
+const pdacStructuredContract = "Devuelve además un bloque ```json con {\"pdac\":[{\"type\":\"actor|use-case|domain-term|journey|business-rule|requirement|constraint|bounded-context\",\"title\":\"...\",\"detail\":\"...\",\"evidence\":\"ruta:líneas\",\"confidence\":\"high|medium|low\"}]} para cada entidad respaldada. Si no existe una entidad, no la inventes.";
 function reviewPrompt(section: Section): string {
-  if (section === "ProductShape") return "PRODUCTSHAPE: analiza el producto usando primero docs/product y después el código para corroborar. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
+  if (section === "ProductShape") return `PRODUCTSHAPE: analiza el producto usando primero docs/product y después el código para corroborar. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes. ${pdacStructuredContract}`;
   if (section === "Arquitectura") return "ARCHITECTURE: inspecciona src/ y tests/ reales del proyecto. Describe componentes, entradas, salidas, persistencia y relaciones confirmadas. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
   return "Revisa el proyecto seleccionado y genera hallazgos verificables y un diagrama Mermaid basado sólo en el código real.";
 }
@@ -194,7 +196,7 @@ function pdacEntityPrompt(page: Exclude<PdacPage, "overview">): string {
             : page === "requirements"
               ? "requisitos, criterios de aceptación y restricciones verificables"
               : "bounded contexts, límites y relaciones entre contextos";
-  return `PRODUCTSHAPE: profundiza sólo en ${focus}. Usa primero docs/product y contrasta con el código. Devuelve hallazgos con rutas verificables y actualiza el diagrama Mermaid sólo con relaciones confirmadas. No inventes datos.`;
+  return `PRODUCTSHAPE: profundiza sólo en ${focus}. Usa primero docs/product y contrasta con el código. Devuelve hallazgos con rutas verificables y actualiza el diagrama Mermaid sólo con relaciones confirmadas. No inventes datos. ${pdacStructuredContract}`;
 }
 function pdacGuidance(signalId: string): { title: string; detail: string; prompt: string } {
   if (signalId === "purpose") return { title: "Confirmar propósito y frontera", detail: "Primero necesito separar qué problema resuelve el producto de lo que queda fuera.", prompt: "PRODUCTSHAPE: profundiza en el propósito y la frontera del producto. Usa docs/product y el código como contraste. Devuelve sólo hechos, incógnitas y rutas verificables. No inventes datos ni arquitectura alternativa." };
@@ -447,6 +449,13 @@ function App(): JSX.Element {
   const [analysisReport, setAnalysisReport] = useState("");
   const [sending, setSending] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [autonomousRecovery, setAutonomousRecovery] = useState(false);
+  const [autonomousCandidateCount, setAutonomousCandidateCount] = useState(0);
+  const [autonomousTextLength, setAutonomousTextLength] = useState(0);
+  const [personalityIdleMs, setPersonalityIdleMs] = useState(defaultPersonalityIdleMs);
+  const [personalityStatus, setPersonalityStatus] = useState<"waiting" | "working">("waiting");
+  const [activeProactiveTarget, setActiveProactiveTarget] = useState<ProactiveTarget | null>(null);
+  const [personalityCountdownMs, setPersonalityCountdownMs] = useState(defaultPersonalityIdleMs);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const streamingDraft = useRef("");
   const lastInteractionAt = useRef(Date.now());
@@ -454,10 +463,12 @@ function App(): JSX.Element {
   const userSelectedPdacPage = useRef(false);
   const streamingRevisionId = useRef<string | null>(null);
   const queuedObjective = useRef<{ prompt: string; workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning" } | null>(null);
-  const [personalityIdleMs, setPersonalityIdleMs] = useState(defaultPersonalityIdleMs);
-  const [personalityStatus, setPersonalityStatus] = useState<"waiting" | "working">("waiting");
-  const [activeProactiveTarget, setActiveProactiveTarget] = useState<ProactiveTarget | null>(null);
-  const [personalityCountdownMs, setPersonalityCountdownMs] = useState(defaultPersonalityIdleMs);
+  const autonomousRecoveryRef = useRef(false);
+  const canonicalizingRef = useRef(false);
+  const pdacPageRef = useRef<PdacPage>("overview");
+  useEffect(() => {
+    pdacPageRef.current = pdacPage;
+  }, [pdacPage]);
   useEffect(() => {
     const container = chatMessagesRef.current;
     if (!container) return;
@@ -516,6 +527,9 @@ function App(): JSX.Element {
     setBootstrapFailed(false);
     setSelectedObjective(null);
     userSelectedPdacPage.current = false;
+    const recoveryPolicy = await window.studio.project.recoveryPolicy();
+    setAutonomousRecovery(recoveryPolicy.autonomous);
+    autonomousRecoveryRef.current = recoveryPolicy.autonomous;
     const registry = await window.studio.projects.list();
     setProjects(registry.projects);
     const active = registry.projects.find((candidate) => candidate.id === registry.activeId);
@@ -577,6 +591,41 @@ function App(): JSX.Element {
       setActivity("El descubrimiento se detuvo");
     }
   }
+  async function promoteAutonomousCandidates(candidates: PdacCandidate[]): Promise<void> {
+    if (candidates.length === 0) return;
+    canonicalizingRef.current = true;
+    setSending(true);
+    setActivity(`ProductShape está guardando ${candidates.length} propuestas…`);
+    try {
+      const result = await window.studio.project.promotePdac(candidates);
+      if (!result.ok) {
+        setChatError(result.error ?? "No se pudo guardar la propuesta PDAC.");
+        setActivity("La propuesta PDAC necesita revisión");
+        return;
+      }
+      if (result.artifacts?.length) {
+        setAssistantFindings(findingsFromProjectArtifacts(result.artifacts));
+      }
+      if (result.mermaid) {
+        const revision: DiagramRevision = { id: `pdac-${Date.now()}`, source: result.mermaid, label: "Grafo ProductShape actualizado", status: "stored", createdAt: "generado por ProductShape" };
+        setStoredDiagram(result.mermaid);
+        setDiagramRevisions((current) => [...current, revision].slice(-12));
+        setSelectedDiagramRevisionId(revision.id);
+      }
+      setAnalysisStale(false);
+      setChatStatus("settled");
+      setPersonalityStatus("waiting");
+      setActivity(`ProductShape guardó ${result.created} propuesta${result.created === 1 ? "" : "s"} y recompiló el grafo.`);
+      setMessages((current) => [...current, { author: "omp", text: `He guardado ${result.created} propuesta${result.created === 1 ? "" : "s"} PDAC como draft y he recompilado el grafo con ProductShape. Continúo con el siguiente foco.` }]);
+    } catch (error) {
+      setChatError(humanizeError(error));
+      setActivity("No se pudo guardar la propuesta PDAC");
+      setChatStatus("failed");
+    } finally {
+      canonicalizingRef.current = false;
+      setSending(false);
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = window.studio.chat.onEvent((event) => {
@@ -623,7 +672,9 @@ function App(): JSX.Element {
         setActivity(tool.title);
       } else if (event.type === "message_end") {
         const streamedText = streamingDraft.current;
-        const text = stringField(event.frame, "text") || streamedText;
+        const frameText = stringField(event.frame, "text");
+        const text = streamedText.length >= (frameText?.length ?? 0) ? streamedText : frameText ?? streamedText;
+        const candidateText = `${streamedText}\n${frameText ?? ""}`;
         streamingDraft.current = "";
         setStreamingText("");
         if (text) {
@@ -641,18 +692,25 @@ function App(): JSX.Element {
           void window.studio.project.saveAnalysis({ report: text, mermaid: diagram });
           setAnalysisStale(false);
           if (diagram) publishStreamingDiagram(diagram, source ? "Mapa recibido de OMP" : "Mapa incremental de hallazgos");
-          streamingRevisionId.current = null;
-          addProgressStep({ title: "Resultado recibido", detail: "El centro y el mapa ya tienen la respuesta completa de OMP.", status: "done" });
-          setActivity("Hallazgos preparados");
+          const candidates = autonomousRecoveryRef.current ? extractPdacCandidates(candidateText, pdacPageRef.current, finalFindings) : [];
+          setAutonomousCandidateCount(candidates.length);
+          setAutonomousTextLength(candidateText.length);
+          if (candidates.length > 0) void promoteAutonomousCandidates(candidates);
+          addProgressStep({ title: "Resultado recibido", detail: candidates.length > 0 ? "OMP terminó; ProductShape está convirtiendo los hallazgos en drafts." : "El centro y el mapa ya tienen la respuesta completa de OMP.", status: "done" });
+          if (candidates.length === 0) setActivity("Hallazgos preparados");
         }
       } else if (event.type === "session_settled") {
         setChatStatus("settled");
-        setPersonalityStatus("waiting");
-        setActiveProactiveTarget(null);
-        setActivity("Listo para continuar");
-        setSending(false);
+        if (!canonicalizingRef.current) {
+          setPersonalityStatus("waiting");
+          setActiveProactiveTarget(null);
+          setActivity("Listo para continuar");
+          setSending(false);
+        } else {
+          setActivity("OMP terminó; ProductShape está guardando el draft.");
+        }
         const nextObjective = queuedObjective.current;
-        if (nextObjective) {
+        if (nextObjective && !canonicalizingRef.current) {
           queuedObjective.current = null;
           window.setTimeout(() => void sendMessage(nextObjective.prompt, nextObjective.workflow), 0);
         }
@@ -694,19 +752,29 @@ function App(): JSX.Element {
       requirements: /requisito|requirement|criterio de aceptación|acceptance|constraint/i,
       contexts: /bounded context|contexto delimitado|instrument-specific|practice material|transcription|acquisition/i,
     } as const;
-    const signalCount = (pattern: RegExp) => assistantFindings.filter((finding) => pattern.test(`${finding.title} ${finding.detail}`)).length;
-    const signal = (id: string, label: string, pattern: RegExp) => ({ id, label, count: signalCount(pattern), state: signalCount(pattern) > 0 ? "found" as const : "pending" as const });
+    const signalTypes: Record<Exclude<PdacFocus, "all">, PdacCandidateType[]> = {
+      actors: ["actor"],
+      "use-cases": ["use-case"],
+      domains: ["domain-term"],
+      journeys: ["journey"],
+      rules: ["business-rule"],
+      requirements: ["requirement", "constraint"],
+      contexts: ["bounded-context"],
+    };
+    const signalCount = (signal: Exclude<PdacFocus, "all">) => assistantFindings.filter((finding) => finding.pdacType ? signalTypes[signal].includes(finding.pdacType) : patterns[signal] ? patterns[signal].test(`${finding.title} ${finding.detail}`) : false).length;
+    const purposeCount = analysisReport.trim() ? 1 : assistantFindings.filter((finding) => patterns.purpose.test(`${finding.title} ${finding.detail}`)).length;
+    const signal = (id: string, label: string, count: number) => ({ id, label, count, state: count > 0 ? "found" as const : "pending" as const });
     return [
-      signal("purpose", "Propósito", patterns.purpose),
-      signal("actors", "Actores", patterns.actors),
-      signal("use-cases", "Casos de uso", patterns["use-cases"]),
-      signal("domains", "Dominio", patterns.domains),
-      signal("journeys", "Journeys", patterns.journeys),
-      signal("rules", "Reglas", patterns.rules),
-      signal("requirements", "Requisitos", patterns.requirements),
-      signal("contexts", "Bounded contexts", patterns.contexts),
+      signal("purpose", "Propósito", purposeCount),
+      signal("actors", "Actores", signalCount("actors")),
+      signal("use-cases", "Casos de uso", signalCount("use-cases")),
+      signal("domains", "Dominio", signalCount("domains")),
+      signal("journeys", "Journeys", signalCount("journeys")),
+      signal("rules", "Reglas", signalCount("rules")),
+      signal("requirements", "Requisitos", signalCount("requirements")),
+      signal("contexts", "Bounded contexts", signalCount("contexts")),
     ];
-  }, [assistantFindings]);
+  }, [analysisReport, assistantFindings]);
   const nextPdacSignal = pdacSignals.find((signal) => signal.state === "pending");
   const nextPdacGuidance = pdacGuidance(nextPdacSignal?.id ?? "purpose");
   const visibleFindings = useMemo(() => {
@@ -829,7 +897,10 @@ function App(): JSX.Element {
     }
     setSending(true);
     try {
-      await window.studio.command.submit({ workflow, prompt: text });
+      const effectivePrompt = autonomousRecoveryRef.current
+        ? `${text}\n\nMODO DE PRUEBA AUTÓNOMO: si encuentras una ambigüedad, resuélvela con la evidencia más fuerte disponible, continúa sin esperar al usuario y marca el resultado como draft con confidence medium.`
+        : text;
+      await window.studio.command.submit({ workflow, prompt: effectivePrompt });
     } catch (error) {
       setSending(false);
       setActiveProactiveTarget(null);
@@ -880,7 +951,8 @@ function App(): JSX.Element {
       if (!sending && !chatInput.trim() && idleFor >= personalityIdleMs && sinceReview >= personalityIdleMs) {
         lastProactiveReviewAt.current = Date.now();
         setPersonalityStatus("working");
-        const pdacComplete = pdacSignals.length > 0 && pdacSignals.every((signal) => signal.state === "found");
+        const requiredSignals = pdacSignals.filter((signal) => signal.id !== "purpose");
+        const pdacComplete = requiredSignals.length > 0 && requiredSignals.every((signal) => signal.state === "found");
         const targetSignal = nextPdacSignal;
         const targetLabel = targetSignal?.label ?? (pdacComplete ? "la siguiente decisión de arquitectura" : pdacPageLabels[pdacPage]);
         const targetPrompt = targetSignal
@@ -903,7 +975,7 @@ function App(): JSX.Element {
 
 
   return (
-    <div className={`app-shell ${theme} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} onPointerDown={() => { lastInteractionAt.current = Date.now(); }}>
+    <div className={`app-shell ${theme} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-recovery-mode={autonomousRecovery ? "autonomous-test" : "interactive"} data-pdac-candidate-count={autonomousCandidateCount} data-pdac-text-length={autonomousTextLength} onPointerDown={() => { lastInteractionAt.current = Date.now(); }}>
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-mark">P</div>

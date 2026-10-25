@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -123,6 +123,7 @@ type ProjectRecord = {
   lastOpenedAt: string;
   detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
+const pdacStructuredPrompt = 'Devuelve además un bloque ```json con {"pdac":[{"type":"actor|use-case|domain-term|journey|business-rule|requirement|constraint|bounded-context","title":"...","detail":"...","evidence":"ruta:líneas","confidence":"high|medium|low"}]} para cada entidad respaldada. Si no existe una entidad, no la inventes.';
 type ProjectRegistry = { version: 1; activeId: string; projects: ProjectRecord[] };
 
 function projectRegistryPath(): string {
@@ -260,12 +261,14 @@ type ProjectPdacNode = { id?: string; type?: string; title?: string; status?: st
 type ProjectPdacEdge = { from?: string; to?: string; kind?: string };
 type ProjectPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string };
 type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string; artifacts: ProjectPdacArtifact[] };
+type PdacCandidateInput = { type?: unknown; title?: unknown; detail?: unknown; evidence?: unknown; confidence?: unknown; primaryActor?: unknown; definedIn?: unknown };
+type PdacCandidate = { type: "actor" | "use-case" | "domain-term" | "journey" | "business-rule" | "requirement" | "constraint" | "bounded-context"; title: string; detail: string; evidence?: string; confidence?: string; primaryActor?: string; definedIn?: string };
 
 async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
   const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
   try {
     const graph = JSON.parse(await readFile(graphPath, "utf8")) as { nodes?: ProjectPdacNode[]; edges?: ProjectPdacEdge[] };
-    const nodes = Array.isArray(graph.nodes) ? graph.nodes.filter((node) => typeof node.title === "string") : [];
+    const nodes = Array.isArray(graph.nodes) ? graph.nodes.filter((node) => typeof node.title === "string" && typeof node.path === "string" && !node.path.endsWith("/canvas.md")) : [];
     if (nodes.length === 0) return null;
     const grouped = new Map<string, ProjectPdacNode[]>();
     for (const node of nodes) {
@@ -341,6 +344,147 @@ function runProductShapeGraph(): Promise<ProductShapeGraphResult> {
     });
   });
 }
+const pdacCandidateDirectories: Record<PdacCandidate["type"], string> = {
+  actor: "actors",
+  "use-case": "use-cases",
+  "domain-term": "domain/terms",
+  journey: "journeys",
+  "business-rule": "business-rules",
+  requirement: "requirements/functional",
+  constraint: "requirements/constraints",
+  "bounded-context": "domain/bounded-contexts",
+};
+const pdacCandidatePrefixes: Record<PdacCandidate["type"], string> = {
+  actor: "ACT",
+  "use-case": "UC",
+  "domain-term": "TERM",
+  journey: "JRN",
+  "business-rule": "BR",
+  requirement: "FR",
+  constraint: "CON",
+  "bounded-context": "BC",
+};
+const pdacCandidateSchemaTypes: Record<PdacCandidate["type"], string> = {
+  actor: "actor",
+  "use-case": "use-case",
+  "domain-term": "domain-term",
+  journey: "journey",
+  "business-rule": "business-rule",
+  requirement: "functional-requirement",
+  constraint: "constraint",
+  "bounded-context": "bounded-context",
+};
+function slugifyPdac(value: string): string {
+  return value.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || "hallazgo";
+}
+function normalizePdacCandidate(input: PdacCandidateInput): PdacCandidate | null {
+  const type = input.type;
+  const title = typeof input.title === "string" ? input.title.replace(/\s+/g, " ").trim() : "";
+  if (!Object.hasOwn(pdacCandidateDirectories, type as string) || !title || title.length > 160) return null;
+  const detail = typeof input.detail === "string" && input.detail.trim() ? input.detail.trim().slice(0, 2_000) : "Hallazgo propuesto por OMP a partir de la evidencia del proyecto.";
+  const evidence = typeof input.evidence === "string" && input.evidence.trim() ? input.evidence.trim().slice(0, 240) : undefined;
+  const confidence = typeof input.confidence === "string" && input.confidence.trim() ? input.confidence.trim().slice(0, 32) : "medium";
+  const primaryActor = typeof input.primaryActor === "string" && /^ACT-[A-Z0-9-]+$/i.test(input.primaryActor.trim()) ? input.primaryActor.trim().toUpperCase() : undefined;
+  const definedIn = typeof input.definedIn === "string" && /^BC-[A-Z0-9-]+$/i.test(input.definedIn.trim()) ? input.definedIn.trim().toUpperCase() : undefined;
+  const candidate: PdacCandidate = { type: type as PdacCandidate["type"], title, detail, confidence };
+  if (evidence) candidate.evidence = evidence;
+  if (primaryActor) candidate.primaryActor = primaryActor;
+  if (definedIn) candidate.definedIn = definedIn;
+  return candidate;
+}
+function pdacId(candidate: PdacCandidate): string {
+  return `${pdacCandidatePrefixes[candidate.type]}-${slugifyPdac(candidate.title).toUpperCase()}`;
+}
+function pdacDocument(candidate: PdacCandidate, journeyStepId: string, requirementSourceId: string): { id: string; path: string; content: string } {
+  const id = pdacId(candidate);
+  const directory = pdacCandidateDirectories[candidate.type];
+  const path = join(projectRoot, "docs", "product", "model", directory, `${id.toLowerCase()}.md`);
+  const source = (candidate.evidence ?? "OMP: evidencia pendiente de consolidación").replace(/[\r\n]+/g, " ").replace(/"/g, "'");
+  const detail = candidate.detail.replace(/\r\n/g, "\n").trim();
+  const actorKind = candidate.type === "actor" ? "actor-kind: human\n" : "";
+  const relationshipFrontmatter = candidate.type === "use-case"
+    ? [`primary-actor: ${candidate.primaryActor ?? "ACT-PRODUCT-USER"}`, "supporting-actors: []", "governed-by: []", "uses-terms: []"]
+    : candidate.type === "journey"
+      ? [`primary-actor: ${candidate.primaryActor ?? "ACT-PRODUCT-USER"}`, `steps:\n  - use-case: ${journeyStepId}`]
+      : candidate.type === "domain-term"
+        ? [`defined-in: ${candidate.definedIn ?? "BC-PRODUCT"}`, "synonyms: []", "uses-terms: []"]
+        : candidate.type === "requirement"
+          ? [`derived-from:\n  - ${requirementSourceId}`, "verification:\n  - scenario: \"La evidencia disponible permite comprobar el requisito en el código.\""]
+          : [];
+  const sections: Record<PdacCandidate["type"], string> = {
+    actor: `## Purpose\n${detail}\n\n## Goals\n${detail}\n\n## Responsibilities\n${detail}\n\n## Boundaries\nPendiente de confirmar con nueva evidencia.`,
+    "use-case": `## Goal\n${detail}\n\n## Trigger\nPendiente de confirmar con la evidencia disponible.\n\n## Preconditions\nPendiente de confirmar con la evidencia disponible.\n\n## Main Flow\n${detail}\n\n## Alternative Flows\nPendiente de confirmar.\n\n## Failure Conditions\nPendiente de confirmar.\n\n## Postconditions\n${detail}`,
+    "domain-term": `## Definition\n${detail}\n\n## Distinguish From\nPendiente de confirmar.\n\n## Usage\n${detail}`,
+    journey: `## Intended Outcome\n${detail}\n\n## Entry Conditions\nPendiente de confirmar.\n\n## Journey Narrative\n${detail}\n\n## Variants and Branches\nPendiente de confirmar.\n\n## Completion Conditions\n${detail}`,
+    "business-rule": `## Rule\n${detail}\n\n## Rationale\nPendiente de confirmar.\n\n## Examples\n${detail}\n\n## Exceptions\nPendiente de confirmar.`,
+    requirement: `## Requirement\n${detail}\n\n## Rationale\nPendiente de confirmar.`,
+    constraint: `## Constraint\n${detail}\n\n## Rationale\nPendiente de confirmar.\n\n## Consequences\nPendiente de confirmar.`,
+    "bounded-context": `## Responsibility\n${detail}\n\n## Language\nPendiente de confirmar.\n\n## Boundaries\n${detail}\n\n## External Relationships\nPendiente de confirmar.`,
+  };
+  const content = [
+    "---",
+    `id: ${id}`,
+    `type: ${pdacCandidateSchemaTypes[candidate.type]}`,
+    `title: ${candidate.title.replace(/[\r\n]+/g, " ").replace(/:/g, " - ")}`,
+    "status: draft",
+    actorKind.trimEnd(),
+    ...relationshipFrontmatter,
+    "provenance:",
+    `  source: "${source}"`,
+    `  confidence: ${candidate.confidence ?? "medium"}`,
+    "  recovered-from: observation",
+    "---",
+    "",
+    sections[candidate.type],
+    "",
+    "## Evidence",
+    "",
+    `- ${source}`,
+    "",
+  ].filter((line) => line.length > 0).join("\n");
+  return { id, path, content };
+}
+async function promotePdacCandidates(inputs: PdacCandidateInput[]): Promise<{ ok: boolean; created: number; artifacts?: ProjectPdacArtifact[]; mermaid?: string | null; error?: string }> {
+  const candidates = inputs.map(normalizePdacCandidate).filter((candidate): candidate is PdacCandidate => candidate !== null);
+  const unique = [...new Map(candidates.map((candidate) => [`${candidate.type}:${slugifyPdac(candidate.title)}`, candidate])).values()];
+  const needsFallbackActor = unique.some((candidate) => candidate.type === "use-case" && !candidate.primaryActor);
+  const needsFallbackContext = unique.some((candidate) => candidate.type === "domain-term" && !candidate.definedIn);
+  const needsFallbackUseCase = unique.some((candidate) => candidate.type === "journey" || candidate.type === "requirement") && !unique.some((candidate) => candidate.type === "use-case");
+  if (needsFallbackActor) {
+    unique.push({ type: "actor", title: "Product user", detail: "Actor provisional usado para mantener la trazabilidad de casos de uso durante la recuperación autónoma.", confidence: "medium" });
+    for (const candidate of unique) if (candidate.type === "use-case" && !candidate.primaryActor) candidate.primaryActor = "ACT-PRODUCT-USER";
+  }
+  if (needsFallbackContext) {
+    unique.push({ type: "bounded-context", title: "Product domain", detail: "Contexto provisional para agrupar términos recuperados mientras se completa la delimitación del dominio.", confidence: "medium" });
+    for (const candidate of unique) if (candidate.type === "domain-term" && !candidate.definedIn) candidate.definedIn = "BC-PRODUCT-DOMAIN";
+  }
+  if (needsFallbackUseCase) {
+    unique.push({ type: "use-case", title: "Recovered PDAC journey step", detail: "Paso provisional para mantener una referencia ProductShape válida durante la recuperación.", confidence: "medium", primaryActor: "ACT-PRODUCT-USER" });
+  }
+  if (unique.length === 0) return { ok: true, created: 0, artifacts: [], mermaid: null };
+  const journeyStepId = pdacId(unique.find((candidate) => candidate.type === "use-case") ?? { type: "use-case", title: "Recovered PDAC journey step", detail: "", confidence: "medium" });
+  const requirementSourceId = pdacId(unique.find((candidate) => candidate.type === "use-case" || candidate.type === "business-rule" || candidate.type === "constraint") ?? { type: "use-case", title: "Recovered PDAC journey step", detail: "", confidence: "medium" });
+  let created = 0;
+  for (const candidate of unique) {
+    const document = pdacDocument(candidate, journeyStepId, requirementSourceId);
+    await mkdir(dirname(document.path), { recursive: true });
+    let previous = "";
+    try {
+      previous = await readFile(document.path, "utf8");
+    } catch {
+      // First draft for this candidate.
+    }
+    if (!/status:\s*(?:accepted|approved)/i.test(previous)) {
+      await writeFile(document.path, document.content, "utf8");
+      created += 1;
+    }
+  }
+  const result = await runProductShapeGraph();
+  if (!result.ok) return { ok: false, created, error: result.error ?? "ProductShape no pudo validar los drafts PDAC." };
+  const truth = await readProjectPdacTruth();
+  if (!truth) return { ok: false, created, error: "ProductShape no devolvió nodos después de promover los drafts." };
+  return { ok: true, created, artifacts: truth.artifacts, mermaid: truth.mermaid };
+}
 type PdacCanvasEdit = { nodeId?: string; page?: string; title?: string };
 let pdacEditQueue = Promise.resolve();
 async function writePdacCanvasEdit(input: PdacCanvasEdit): Promise<{ nodeId: string; title: string; updatedAt: string }> {
@@ -386,17 +530,9 @@ async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: str
     const saved = JSON.parse(await readFile(projectAnalysisPath(), "utf8")) as StoredProjectAnalysis;
     return { projectName: saved.projectName, mermaid: saved.mermaid, report: saved.report, updatedAt: saved.updatedAt, stale: saved.sourceSignature !== signature, source: "stored-analysis" };
   } catch {
-    // Fall back to the captured Notes artifact until the project has its own persisted state.
+    // No hay análisis local guardado; el grafo ProductShape sigue siendo la autoridad.
   }
-  if (projectName !== "notes") return { projectName, mermaid: null, report: null, stale: false, source: "none" };
-  try {
-    const evidenceDirectory = join(workspaceRoot, "docs", "implementation", "evidence");
-    const mermaid = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-cli.mermaid"), "utf8");
-    const report = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-real.md"), "utf8");
-    return { projectName, mermaid: mermaid.trim() || null, report: report.trim() || null, stale: false, source: "stored-analysis" };
-  } catch {
-    return { projectName, mermaid: null, report: null, stale: false, source: "none" };
-  }
+  return { projectName, mermaid: null, report: null, stale: false, source: "none" };
 }
 type StoredProjectAnalysis = { projectName: string; mermaid: string | null; report: string | null; updatedAt: string; sourceSignature: string };
 function projectAnalysisPath(): string {
@@ -484,7 +620,7 @@ async function bootstrapDiscovery(resume: boolean): Promise<{ status: DiscoveryS
     const state = await runtime.start(
       {
         workflow: "brownfield-discovery",
-        prompt: "Inicia el descubrimiento del proyecto sin esperar otra instrucción. Lee la documentación de producto y después el código. Publica inventario, hechos, inferencias, incógnitas y un primer diagrama Mermaid confirmado. No modifiques archivos.",
+        prompt: `Inicia el descubrimiento del proyecto sin esperar otra instrucción. Lee la documentación de producto y después el código. Publica inventario, hechos, inferencias, incógnitas y un primer diagrama Mermaid confirmado. No modifiques archivos. ${pdacStructuredPrompt}`,
       },
       { projectId: projectName, threadId: `${projectName}/discovery`, runId: randomUUID(), requestId: randomUUID() },
     );
@@ -538,6 +674,13 @@ function installChatIpc(): void {
     }
     return { ok: true, artifacts: truth.artifacts, mermaid: truth.mermaid };
   });
+  ipcMain.handle("studio:project:pdac-promote", async (_event, value: unknown) => {
+    if (!Array.isArray(value)) throw new Error("PDAC candidates must be an array");
+    return promotePdacCandidates(value as PdacCandidateInput[]);
+  });
+  ipcMain.handle("studio:project:recovery-policy", () => ({
+    autonomous: process.env.PROJECTSTUDIO_AUTONOMOUS_RECOVERY === "1",
+  }));
   ipcMain.handle("studio:project:analysis:save", async (_event, value: unknown) => {
     if (typeof value !== "object" || value === null) throw new Error("analysis must be an object");
     const input = value as { report?: unknown; mermaid?: unknown };

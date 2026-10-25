@@ -18,6 +18,7 @@ Notes tiene actualmente un grafo canónico recuperado de la evidencia OMP real: 
 La prueba que inicia Notes completamente vacío y espera que el renderer reciba texto OMP ya pasa con OMP real: el worker normaliza los `text_delta`, publica un `message_end` siempre al cerrar la sesión y el preload expone el guardado de análisis que el renderer necesita. La promoción autónoma persiste el grafo canónico; el E2E pasó con candidatos y texto observables.
 
 El E2E de Notes usa ahora `PROJECTSTUDIO_PROJECT_REGISTRY` aislado y elimina su copia temporal al terminar; no puede cambiar el proyecto activo del usuario. La ejecución manual real posterior a este ajuste queda pendiente para no consumir otra llamada OMP; la verificación determinista y el lint del script pasan.
+Los lienzos por artefacto separan ahora los hallazgos por `pdacType`; un actor no aparece en Journeys ni Casos de uso aunque su detalle mencione esos términos. Se versionó la clave Tldraw a `v3` para descartar lienzos mezclados de la versión anterior. La personalidad no cambia de página si el usuario ya eligió un foco.
 ## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
 
 | ID | Estado | Superficie | Output verificable |

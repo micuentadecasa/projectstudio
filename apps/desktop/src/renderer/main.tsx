@@ -6,13 +6,12 @@ import "./styles.css";
 import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
 import { extractPdacCandidates, pdacCandidateTypes, type PdacCandidate, type PdacCandidateType, type PdacPage } from "./pdac-recovery.js";
+import { matchesPdacFocus, pdacSignalPatterns, type PdacFocus } from "./pdac-focus.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
 type FindingKind = "fact" | "inference" | "unknown";
 type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean; pdacType?: PdacCandidateType };
 type ProactiveTarget = { label: string };
-type PdacFocus = "all" | "use-cases" | "actors" | "domains" | "journeys" | "rules" | "requirements" | "contexts";
-const pdacPageLabels: Record<PdacPage, string> = { overview: "ProductShape", "use-cases": "Casos de uso", actors: "Actores", domains: "Dominio", journeys: "Journeys", rules: "Reglas y restricciones", requirements: "Requisitos", contexts: "Bounded contexts" };
 const pdacArtifactTypeLabels: Record<string, string> = {
   actor: "Actor",
   "use-case": "Caso de uso",
@@ -257,7 +256,7 @@ function canvasText(value: unknown): string {
   return Object.entries(record).filter(([key]) => key !== "attrs" && key !== "type").map(([, child]) => canvasText(child)).join("");
 }
 function PdacCanvas({ projectId, page, findings }: { projectId: string; page: PdacPage; findings: AssistantFinding[] }): JSX.Element {
-  const persistenceKey = `projectstudio-pdac:v2:${projectId}:${page}`;
+  const persistenceKey = `projectstudio-pdac:v3:${projectId}:${page}`;
   const hasFindings = findings.length > 0;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const editorPageRef = useRef<PdacPage | null>(null);
@@ -751,27 +750,8 @@ function App(): JSX.Element {
   );
   const latestDiagram = selectedDiagramRevision?.source ?? [...messages].reverse().map((message) => extractMermaid(message.text)).find((source): source is string => Boolean(source)) ?? storedDiagram;
   const pdacSignals = useMemo(() => {
-    const patterns = {
-      purpose: /propósito|frontera|producto/i,
-      actors: /actor|aprendiz|operador|learner|teacher|usuario/i,
-      "use-cases": /caso de uso|importar material|practicar|explorar biblioteca|worker local|playback/i,
-      domains: /dominio|entidad|concepto|término|agregado|domain/i,
-      journeys: /journey|recorrido|flujo|estado|workflow/i,
-      rules: /regla|restric|invariant|local-first|debe|permit|historial/i,
-      requirements: /requisito|requirement|criterio de aceptación|acceptance|constraint/i,
-      contexts: /bounded context|contexto delimitado|instrument-specific|practice material|transcription|acquisition/i,
-    } as const;
-    const signalTypes: Record<Exclude<PdacFocus, "all">, PdacCandidateType[]> = {
-      actors: ["actor"],
-      "use-cases": ["use-case"],
-      domains: ["domain-term"],
-      journeys: ["journey"],
-      rules: ["business-rule"],
-      requirements: ["requirement", "constraint"],
-      contexts: ["bounded-context"],
-    };
-    const signalCount = (signal: Exclude<PdacFocus, "all">) => assistantFindings.filter((finding) => finding.pdacType ? signalTypes[signal].includes(finding.pdacType) : patterns[signal] ? patterns[signal].test(`${finding.title} ${finding.detail}`) : false).length;
-    const purposeCount = analysisReport.trim() ? 1 : assistantFindings.filter((finding) => patterns.purpose.test(`${finding.title} ${finding.detail}`)).length;
+    const signalCount = (signal: Exclude<PdacFocus, "all">) => assistantFindings.filter((finding) => matchesPdacFocus(finding, signal)).length;
+    const purposeCount = analysisReport.trim() ? 1 : assistantFindings.filter((finding) => pdacSignalPatterns.purpose.test(`${finding.title} ${finding.detail}`)).length;
     const signal = (id: string, label: string, count: number) => ({ id, label, count, state: count > 0 ? "found" as const : "pending" as const });
     return [
       signal("purpose", "Propósito", purposeCount),
@@ -788,17 +768,7 @@ function App(): JSX.Element {
   const nextPdacGuidance = pdacGuidance(nextPdacSignal?.id ?? "purpose");
   const visibleFindings = useMemo(() => {
     if (pdacFocus === "all") return assistantFindings;
-    const patterns: Record<Exclude<PdacFocus, "all">, RegExp> = {
-      "use-cases": /caso de uso|importar material|practicar|explorar biblioteca|worker local|playback/i,
-      actors: /actor|aprendiz|operador|learner|teacher|usuario/i,
-      domains: /dominio|entidad|concepto|término|agregado|domain/i,
-      journeys: /journey|recorrido|flujo|estado|workflow/i,
-      rules: /regla|restric|invariant|local-first|debe|permit|historial/i,
-      requirements: /requisito|requirement|criterio de aceptación|acceptance|constraint/i,
-      contexts: /bounded context|contexto delimitado|instrument-specific|practice material|transcription|acquisition/i,
-    };
-    const pattern = patterns[pdacFocus];
-    return assistantFindings.filter((finding) => pattern.test(`${finding.title} ${finding.detail}`));
+    return assistantFindings.filter((finding) => matchesPdacFocus(finding, pdacFocus));
   }, [assistantFindings, pdacFocus]);
   const domainTerms = useMemo(() => {
     const terms = extractDomainTerms(analysisReport);
@@ -975,7 +945,7 @@ function App(): JSX.Element {
         setActiveProactiveTarget({ label: targetLabel });
         setMessages((current) => [...current, { author: "omp", text: `Sigo con ${targetLabel}. He elegido este foco para continuar el trabajo mientras no estás interactuando.` }]);
         void sendMessageRef.current?.(targetPrompt, workflow, targetLabel);
-        if (targetSignal && targetSignal.id in pdacPageLabels) focusWorkspace("ProductShape", targetSignal.id as PdacPage);
+        if (section === "ProductShape" && pdacPage === "overview" && !userSelectedPdacPage.current && targetSignal && targetSignal.id in pdacPageLabels) focusWorkspace("ProductShape", targetSignal.id as PdacPage);
       }
     }, intervalMs);
     return () => window.clearInterval(timer);

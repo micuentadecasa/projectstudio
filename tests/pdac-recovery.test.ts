@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { matchesPdacFocus } from "../apps/desktop/src/renderer/pdac-focus.js";
 import { extractPdacCandidates } from "../apps/desktop/src/renderer/pdac-recovery.js";
 
 const structuredResponse = `Hallazgos confirmados.
@@ -29,5 +30,12 @@ describe("recuperación PDAC determinista", () => {
     const candidates = extractPdacCandidates("Actores:\n- Persona usuaria: inicia una sesión.\n- Runtime OMR: procesa una imagen.", "actors", []);
     expect(candidates.map((candidate) => candidate.title)).toEqual(["Persona usuaria", "Runtime OMR"]);
     expect(candidates.every((candidate) => candidate.type === "actor")).toBe(true);
+  });
+
+  it("mantiene los hallazgos tipados en su página aunque el detalle mencione otros focos", () => {
+    const actor = { pdacType: "actor" as const, title: "Usuario músico", detail: "Participa en el journey y usa varios casos de uso." };
+    expect(matchesPdacFocus(actor, "actors")).toBe(true);
+    expect(matchesPdacFocus(actor, "journeys")).toBe(false);
+    expect(matchesPdacFocus(actor, "use-cases")).toBe(false);
   });
 });

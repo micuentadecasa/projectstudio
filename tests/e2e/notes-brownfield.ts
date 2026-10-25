@@ -26,8 +26,8 @@ try {
   await window.getByRole("heading", { name: "ProductShape" }).waitFor();
   const productShapeCount = await window.locator(".message-row.omp").count();
   await window.getByRole("button", { name: "Revisar y diagramar" }).click();
-  await window.locator(".pdac-live-progress").waitFor({ timeout: 30_000 });
   await window.locator(".pdac-progress-panel").waitFor({ timeout: 30_000 });
+  if (await window.locator(".pdac-progress-panel").count() !== 1 || await window.locator(".pdac-live-progress").count() !== 0) throw new Error("ProductShape exposes duplicate central activity status");
   if ((await window.locator(".pdac-progress-step").count()) === 0) throw new Error("ProductShape activity timeline did not publish a step");
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, productShapeCount, { timeout: 180_000 });
   const productShapeMessage = window.locator(".message-row.omp").last();

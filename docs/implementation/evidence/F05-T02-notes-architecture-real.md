@@ -1,54 +1,38 @@
 ✦
 OMP
-## Resumen 1. **[Hecho] Frontera HTTP:** `src/drumcoach_app/main.py` crea FastAPI, configura SQLite y raíces de artefactos/fuentes, sirve viewer, importaciones, biblioteca, scores, playback, assistant, voz y exploración MIDI. Entradas: HTTP y archivos; salidas: JSON, archivos y HTML. Evidencia: `src/drumcoach_app/main.py:20-62,289-323,626-667,870-918,1231-1458`. 2. **[Hecho] Persistencia dividida:** `DrumCoachRepository` mantiene Songs, Instrument Parts, revisiones, bundles, jobs y exploraciones MIDI en SQLite; los artefactos de score y diagnóstico se guardan como archivos con rutas relativas. Evidencia: `src/drumcoach_app/repository.py:178-327,330-337`; contratos: `tests/test_repository.py:10-388`. 3. **[Hecho] Ingesta local secuencial:** los endpoints crean jobs `raw_events`, `local_audio`, `youtube_url` o `score_image`; `local_worker_cli.py`/`queue_drain_cli.py` los drenan y `import_runner.py` delega en MuScriptor, adquisición YouTube o OMR. Evidencia: `src/drumcoach_app/local_worker_cli.py:14-55`, `queue_drain_cli.py:21-123`, `import_runner.py:82-424`. 4. **[Hecho] Pipeline de material:** los eventos se normalizan y convierten en `PracticeScore` —schema 1 para batería, schema 2 para partes afinadas—; después se publican MusicXML, playback, provenance, diagnósticos y `note-trace`. La ruta de imagen convierte MusicXML OMR en eventos de piano. Evidencia: `src/drumcoach_spike/practice_score.py:99-250`, `src/drumcoach_app/import_runner.py:426-594`, `src/drumcoach_spike/transcription_pipeline.py:133-364`, `src/drumcoach_spike/omr.py:24-191`. 5. **[Hecho] Práctica y assistant:** `PlayerController` resuelve una parte activa mediante `DrumCoachRepository`, `TimelineEngine` y el score; `generated_playback.py` deriva notas, límites de compás y timeline para el viewer. El assistant usa herramientas validadas, análisis determinista del teacher y sesiones JSON locales. Evidencia: `src/drumcoach_app/player.py:202-247,316-564`, `src/drumcoach_app/timeline.py:64-190`, `src/drumcoach_app/generated_playback.py:47-243`, `src/drumcoach_app/assistant/orchestrator.py:218-498`, `src/drumcoach_app/assistant/session.py:14-158`. ## Decisiones observadas - **Fuente de verdad:** `practice-score.json`; MusicXML, MIDI, playback, engraving y diagnósticos son proyecciones o sidecars. `src/drumcoach_app/main.py:1335-1357` vuelve a generar MusicXML desde el score cuando procede. - **Cadena de importación confirmada:** job → runner → score canónico → archivos de artefactos → Song/Instrument Part/Revision en SQLite. Los contratos están cubiertos por `tests/test_import_runner.py:19-148` y `tests/test_instruments_phase_one.py:18-106`. - **Rama separada:** `/midi-import` llama directamente a MuScriptor y persiste `midi_explorations` y `DrumScore`; no pasa por una revisión `PracticeScore`. Evidencia: `src/drumcoach_app/main.py:505-552`, `src/drumcoach_app/repository.py:197-203`; pruebas: `tests/test_app.py:139-213`. - **Estado de práctica:** el score y las revisiones viven en SQLite/artefactos; la sesión de player y assistant se guarda en `.local/assistant/sessions/*.json`. Evidencia: `src/drumcoach_app/assistant/session.py:34-59,127-158`. ## Riesgos - **[Hecho] Dependencia de entorno:** la tanda arquitectónica independiente pasó: `40 passed` en `tests/test_repository.py`, `test_import_runner.py` y `test_generated_playback.py`. La tanda ampliada no llegó a recolectar `test_score_image_import.py` ni `test_instruments_phase_one.py` porque `main.py` importa `muscriptor.soundfonts`, que encadena a `torch`, ausente en ese entorno. Evidencia de importación: `src/drumcoach_app/main.py:44-45`. - **[Inferencia]** Si FastAPI debe arrancar sin MuScriptor/torch, la importación superior de `main.py` es una frontera frágil; la opción segura sería cargar esas dependencias sólo en las rutas que las usan. - **[Incógnita]** No queda demostrado en este entorno que el conjunto completo de endpoints HTTP pueda ejecutarse hasta el worker real; sí están cubiertos los contratos de repository, runners, score, playback y teacher mediante pruebas aisladas. ## Próximos pasos 1. Confirmar si el arranque de FastAPI debe funcionar sin `torch`/MuScriptor. Opción segura: mantener el core HTTP y biblioteca arrancables, y diferir la carga del runtime de transcripción. 2. Ejecutar la suite ampliada con el entorno declarado por el proyecto y verificar `/health`, creación de job, drenaje de un job y lectura de una revisión activa. 3. Mantener separadas en la documentación técnica las dos rutas reales: importación canónica a `PracticeScore` y exploración directa MIDI. ```mermaid flowchart LR Browser["Browser / viewer"] -->|HTTP| API["main.py<br/>FastAPI"] Source["Audio local / raw JSONL / YouTube URL / score image"] --> API API --> Repo["repository.py<br/>DrumCoachRepository"] Repo --> SQLite[("SQLite<br/>songs, parts, revisions, jobs, bundles")] API --> Jobs["Import jobs"] Jobs --> Repo Worker["local_worker_cli.py<br/>queue_drain_cli.py"] --> Jobs Worker --> Runner["import_runner.py"] Runner --> Adapter["transcription_adapter.py<br/>MuScriptor"] Runner --> OMR["omr.py<br/>OMR opcional"] Runner --> Acquisition["source_acquisition.py"] Runner --> Score["practice_score.py<br/>PracticeScore canónico"] Runner --> Artifacts[("artifact_root<br/>JSON, JSONL, MusicXML, diagnósticos")] Runner --> Engraver["musescore_engraver.py<br/>engraving opcional"] Score --> MusicXML["musicxml.py"] Score --> Playback["generated_playback.py"] API --> Player["player.py<br/>PlayerController"] Repo --> Player Player --> Timeline["timeline.py<br/>TimelineEngine"] Player --> Score Player --> Playback Playback --> Browser MusicXML --> Browser API --> Assistant["assistant/orchestrator.py"] Assistant --> Provider["Local LFM provider"] Assistant --> Tools["assistant/tools.py"] Tools --> Teacher["teacher/analyse.py<br/>análisis determinista"] Teacher --> Score Teacher --> Player Assistant --> Sessions[(".local/assistant/sessions/*.json")] Assistant --> Browser API --> MIDI["/midi-import"] MIDI --> Adapter MIDI --> MIDIStore[("midi_explorations<br/>+ DrumScore files")] MIDIStore --> Browser ```
-Browser / viewer
-Browser
-Audio local / raw JSONL /YouTube URL / score image
-Source
-local_worker_cli.py<br/>queue_drain_cli.py
-Worker
-main.py<br/>FastAPI
-API
-import_runner.py
-Runner
-repository.py<br/>DrumCoachRepository
-Repo
-Import jobs
-Jobs
-transcription_adapter.py<br/>MuScriptor
-Adapter
-omr.py<br/>OMR opcional
-OMR
-source_acquisition.py
-Acquisition
-practice_score.py<br/>PracticeScorecanónico
-Score
-("artifact_root<br/>JSON,JSONL, MusicXML,diagnósticos")
-Artifacts
-musescore_engraver.py<br/>engravingopcional
-Engraver
-assistant/orchestrator.py
-Assistant
-/midi-import
+## Hallazgos verificables 1. **Aplicación y API local.** `src/drumcoach_app/main.py` construye FastAPI, configura SQLite, `artifact_root` e `imported_source_root`, y expone salud, imports, biblioteca, partes, artefactos, reproductor, assistant y exploración MIDI. Entradas: JSON, uploads, URLs y parámetros HTTP. Salidas: `dict`, `Response` y `FileResponse`. Evidencia: `src/drumcoach_app/main.py:290-323,505-506,626-718,870-1010,1231-1501`; `tests/test_app.py:18-113`. 2. **Persistencia y estado de imports.** `repository.py` mantiene en SQLite `songs`, `instrument_parts`, `practice_score_revisions`, `import_bundles`, `import_jobs` y `midi_explorations`. La base guarda identidad, estados y rutas relativas; los contenidos de score y diagnósticos permanecen en archivos. Los bundles crean un `Song` y jobs hijos por instrumento. Evidencia: `src/drumcoach_app/repository.py:180-255,330-431,627-735,801-1017`; `tests/test_repository.py:10-37`; `tests/test_instruments_phase_one.py:18-45`. 3. **Worker e ingestión.** `local_worker_cli.py` ejecuta ciclos secuenciales para `raw_events`, `youtube_url`, `local_audio` y `score_image`; `queue_drain_cli.py` selecciona el runner correspondiente. `import_runner.py` conecta adquisición, `MuScriptorTranscriptionAdapter`, OMR y publicación. Entradas: eventos JSONL, audio local, URL o imagen. Salida persistida: `Song`, `InstrumentPart`, revisión y estado final del job. Evidencia: `src/drumcoach_app/local_worker_cli.py:14-55`; `src/drumcoach_app/queue_drain_cli.py:9-123`; `src/drumcoach_app/import_runner.py:192-284,319-399,426-594`; `tests/test_import_runner.py:19-115`; `tests/test_score_image_import.py:66-117,174-191`. 4. **Pipeline canónico de notas y artefactos.** `src/drumcoach_spike/practice_score.py` convierte eventos preservados en un score por instrumento: batería en schema 1 y partes tonales en schema 2; los eventos incompatibles quedan en `unsupported_events`. `transcription_pipeline.py` y `_complete_import_job` publican eventos crudos/normalizados, `practice-score.json`, MusicXML, provenance, diagnósticos, note trace y playback derivado. Evidencia: `src/drumcoach_spike/practice_score.py:99-185,187-250`; `src/drumcoach_spike/transcription_pipeline.py:87-125,290-364`; `src/drumcoach_app/import_runner.py:442-529`; `tests/test_instruments_phase_one.py:108-187`. 5. **Práctica, playback y coaching.** `PlayerController` resuelve una revisión activa desde repository y archivos, mantiene `PlayerSession` en el `state_store` inyectado y controla instrumento, rango, tempo, loop y transporte. `generated_playback.py` deriva payloads score-time desde el JSON canónico y sidecars. `teacher/analyse.py` analiza el rango seleccionado; `assistant/tools.py` prepara acciones pendientes y sólo reproduce tras confirmación. Evidencia: `src/drumcoach_app/player.py:316-427,447-498`; `src/drumcoach_app/generated_playback.py:47-78,123-242`; `src/drumcoach_app/teacher/analyse.py:32-95`; `src/drumcoach_app/assistant/tools.py:1255-1508`; `tests/test_player.py:45-126`; `tests/test_teacher_tools.py:154-228`. ## Decisiones - La fuente de verdad arquitectónica es `practice-score.json`; SQLite referencia revisiones y archivos, pero no sustituye el score. - El worker no implementa una cola distribuida: reclama jobs SQLite y ejecuta runners locales secuenciales. - El reproductor no persiste su sesión en las tablas de dominio; usa el `state_store` recibido por `PlayerController`. - La verificación ejecutada cubrió los contratos principales: **227 tests pasaron**, con una advertencia deprecada de `httpx`/`TestClient`. ## Riesgos - Hay varias proyecciones de MusicXML: conversor interno, MuseScore opcional y ruta legacy de batería. `import_runner.py:534-548,680-798` registra fallback, engraving y validación semántica; una documentación futura debe distinguirlos. - FastAPI puede iniciar su worker embebido y también existe `local_worker_cli.py`; el reclamo atómico `queued → running` evita doble ejecución, pero la operación debe elegir un modo principal. - Assistant, teacher, voice, OMR y MuseScore tienen dependencias y límites de disponibilidad que no pertenecen al núcleo SQLite/score. - La exploración MIDI usa tablas y endpoints propios y no equivale al flujo de `ImportJob`; mezclar ambos caminos produciría una arquitectura falsa. ## Próximos pasos 1. Documentar esta vista como arquitectura actual, separando explícitamente **persistencia de dominio**, **archivos de artefactos** y **estado efímero del reproductor**. 2. Decisión única pendiente: **¿assistant/teacher/voice y engraving deben documentarse como núcleo o como capacidades opcionales?** Opción segura: mantener como núcleo `FastAPI + jobs locales + Practice Score + biblioteca + playback`; marcar el resto como extensiones. 3. Si se requiere endurecimiento operativo, probar por separado el worker embebido y el CLI local con jobs concurrentes y verificar la transición SQLite. ```mermaid flowchart LR HTTP["HTTP, uploads y URLs"] APP["FastAPI<br/>src/drumcoach_app/main.py"] VIEW["Viewer estático y endpoints JSON"] DB["SQLite<br/>src/drumcoach_app/repository.py"] JOB["ImportJob / ImportBundle"] WORKER["Worker local<br/>local_worker_cli.py / queue_drain_cli.py"] RUNNER["Runners<br/>src/drumcoach_app/import_runner.py"] ADAPTER["TranscriptionAdapter<br/>MuScriptor"] OMR["OMR opcional<br/>src/drumcoach_spike/omr.py"] SPIKE["Practice Score pipeline<br/>practice_score.py / transcription_pipeline.py"] ART["Artifact root<br/>JSON, MusicXML, diagnostics y trace"] MS["MuseScore 4 opcional<br/>musescore_engraver.py"] MIDI["Exploración MIDI"] PLAYER["PlayerController<br/>player.py"] PLAYBACK["Generated playback<br/>generated_playback.py"] TEACHER["Teacher y assistant tools"] STATE["state_store<br/>PlayerSession"] HTTP --> APP APP --> VIEW VIEW --> APP APP --> DB APP --> JOB APP --> MIDI APP -. worker embebido opcional .-> WORKER WORKER --> JOB JOB --> RUNNER RUNNER -->|audio / URL| ADAPTER RUNNER -->|score image| OMR ADAPTER --> SPIKE OMR --> RUNNER RUNNER --> SPIKE SPIKE --> ART RUNNER --> ART RUNNER --> DB RUNNER -. engraving standalone .-> MS MS --> ART MIDI --> DB MIDI --> ART DB --> PLAYER ART --> PLAYER PLAYER --> STATE APP --> PLAYER APP --> PLAYBACK PLAYBACK --> VIEW APP --> TEACHER TEACHER --> PLAYER TEACHER --> DB TEACHER --> ART
+HTTP, uploads y URLs
+HTTP
+Workerlocal<br/>local_worker_cli.py/ queue_drain_cli.py
+WORKER
+MuseScore 4opcional<br/>musescore_engraver.py
+MS
+FastAPI<br/>src/drumcoach_app/main.py
+APP
+Viewer estático yendpoints JSON
+VIEW
+SQLite<br/>src/drumcoach_app/repository.py
+DB
+ImportJob / ImportBundle
+JOB
+Exploración MIDI
 MIDI
-("SQLite<br/>songs,parts, revisions, jobs,bundles")
-SQLite
-musicxml.py
-MusicXML
-generated_playback.py
-Playback
-player.py<br/>PlayerController
-Player
-Local LFM provider
-Provider
-assistant/tools.py
-Tools
-(".local/assistant/sessions/*.json")
-Sessions
-("midi_explorations<br/>+DrumScore files")
-MIDIStore
-timeline.py<br/>TimelineEngine
-Timeline
-teacher/analyse.py<br/>análisisdeterminista
-Teacher
+Generatedplayback<br/>generated_playback.py
+PLAYBACK
+Teacher y assistant tools
+TEACHER
+Runners<br/>src/drumcoach_app/import_runner.py
+RUNNER
+TranscriptionAdapter<br/>MuScriptor
+ADAPTER
+OMRopcional<br/>src/drumcoach_spike/omr.py
+OMR
+Practice Scorepipeline<br/>practice_score.py/
+SPIKE
+Artifact root<br/>JSON,MusicXML, diagnostics ytrace
+ART
+PlayerController<br/>player.py
+PLAYER
+state_store<br/>PlayerSession
+STATE
 Mapa de relaciones · generado por OMP con evidencia del proyecto

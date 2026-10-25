@@ -10,7 +10,7 @@
 body { margin: 0; min-width: 1120px; min-height: 100vh; overflow: hidden; }
 button, select, textarea { font: inherit; }
 button { cursor: pointer; }
-.app-shell { --surface: #141d2a; --surface-strong: #1a2534; --surface-soft: #111a26; --line: #2a3748; --muted: #8e9aae; --text: #e8edf5; --accent: #7c8cff; --accent-soft: #293255; --green: #65d5a2; --orange: #f4b26b; display: flex; flex-direction: column; min-height: 100vh; background: #101722; color: var(--text); }
+.app-shell { --surface: #141d2a; --surface-strong: #1a2534; --surface-soft: #111a26; --line: #2a3748; --muted: #8e9aae; --text: #e8edf5; --accent: #7c8cff; --accent-soft: #293255; --green: #65d5a2; --orange: #f4b26b; display: flex; flex-direction: column; height: 100vh; min-height: 0; overflow: hidden; background: #101722; color: var(--text); }
 .app-shell.light { --surface: #ffffff; --surface-strong: #f5f7fb; --surface-soft: #eef2f8; --line: #d8deea; --muted: #68758a; --text: #172236; --accent: #5c68d8; --accent-soft: #e8eafe; --green: #198d62; --orange: #bd6a16; background: #edf1f7; }
 .topbar { height: 70px; flex: 0 0 70px; display: flex; align-items: center; gap: 28px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .brand-block { display: flex; align-items: center; gap: 11px; min-width: 236px; }
@@ -65,7 +65,7 @@ button { cursor: pointer; }
 .connection-card strong { font-size: 11px; }
 .connection-card small { margin-top: 3px; color: var(--muted); font-size: 9px; }
 .phase-label { padding: 15px 6px 0; color: var(--muted); font-size: 9px; letter-spacing: .1em; }
-.main-panel { display: flex; flex-direction: column; flex: 1; min-width: 520px; background: var(--surface); }
+.main-panel { display: flex; flex-direction: column; flex: 1; min-width: 520px; min-height: 0; background: var(--surface); }
 .tab-strip { display: flex; align-items: end; height: 45px; padding: 0 19px; border-bottom: 1px solid var(--line); background: var(--surface-soft); }
 .view-tab, .add-tab { height: 45px; border: 0; border-bottom: 2px solid transparent; color: var(--muted); background: transparent; font-size: 11px; }
 .view-tab { padding: 0 14px; }
@@ -73,7 +73,7 @@ button { cursor: pointer; }
 .tab-status { margin-right: 7px; color: var(--accent); font-size: 9px; }
 .tab-close { margin-left: 12px; color: var(--muted); }
 .add-tab { padding: 0 12px; font-size: 20px; }
-.content-scroll { overflow: auto; padding: 25px 31px 40px; }
+.content-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 25px 31px 40px; }
 .breadcrumb { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; }
 .breadcrumb strong { color: var(--text); }
 .breadcrumb-spacer { flex: 1; }

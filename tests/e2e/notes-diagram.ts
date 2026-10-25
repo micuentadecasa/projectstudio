@@ -27,6 +27,9 @@ try {
   if (await window.locator(".pdac-kind-badge").count() === 0) throw new Error("Stored ProductShape findings have no evidence classification");
   if (await window.locator(".welcome-strip").count() !== 0) throw new Error("ProductShape still shows the duplicated upper status");
   if (await window.locator(".pdac-guide-card").count() !== 1) throw new Error("ProductShape guide card is missing");
+  const contentScroll = window.locator(".content-scroll");
+  const scrollMetrics = await contentScroll.evaluate((element) => ({ scrollHeight: element.scrollHeight, clientHeight: element.clientHeight }));
+  if (scrollMetrics.scrollHeight <= scrollMetrics.clientHeight) throw new Error(`ProductShape center is not scrollable: ${JSON.stringify(scrollMetrics)}`);
   await window.getByRole("button", { name: /Casos de uso/ }).click();
   await window.getByRole("heading", { level: 1, name: "Casos de uso" }).waitFor();
   await window.getByText("ENTIDAD PDAC", { exact: true }).waitFor();

@@ -132,6 +132,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T22 | done | durante el streaming el centro muestra actividad segura del OMP, hallazgos parciales y mapa incremental de evidencia antes del Mermaid final |
 | F05-T23 | done | guía PDAC calcula el siguiente foco pendiente, alinea el contador con los hallazgos filtrables y elimina el status superior duplicado de ProductShape |
 | F05-T24 | done | resultado de descubrimiento resume hechos, inferencias y pendientes; cada hallazgo conserva su ruta de evidencia y etiqueta visible |
+| F05-T25 | done | ProductShape usa un único timeline de actividad central y el shell fija `100vh` con `.content-scroll` flexible y desplazable para alcanzar confirmación, resultados y diagramas |
 ### Verificación F05
 
 ```bash

@@ -35,7 +35,7 @@ El usuario no opera el CLI ni debe leer el repositorio entero. Su recorrido es:
 2. Deja que el asistente arranque el descubrimiento o pulsa **Revisar y diagramar** si quiere repetirlo.
 3. Lee **Lo que va encontrando**: propósito, actores, casos de uso, restricciones y rutas de evidencia. Cada tarjeta es un resumen de una salida real de OMP, no una actividad decorativa.
 4. Mientras OMP trabaja, el centro muestra una línea compacta de actividad: qué fase está ejecutando, qué herramienta segura está usando y cuándo llega un resultado. No expone prompts, argumentos ni razonamiento interno.
-5. Cuando el stream identifica una sección de casos de uso o una relación, la interfaz añade el hallazgo al detalle y actualiza un mapa incremental de evidencia; cuando llega Mermaid confirmado, sustituye ese índice por las relaciones reales.
+5. El contenido central se desplaza dentro de la ventana: el usuario puede llegar a la guía de confirmación, al resumen, al detalle y al mapa sin perder el contexto del proyecto.
 6. Usa **Guía PDAC · siguiente paso** para saber qué área falta documentar. El botón de foco lanza una consulta específica sin obligar al usuario a escribir el prompt técnico.
 7. Pulsa **Casos de uso**, **Actores**, **Reglas y restricciones** o **Bounded contexts** para abrir la página de esa entidad desde el estado PDAC.
 8. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.

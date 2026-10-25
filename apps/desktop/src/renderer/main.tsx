@@ -208,7 +208,6 @@ function App(): JSX.Element {
   const [chatStatus, setChatStatus] = useState("starting");
   const [chatError, setChatError] = useState("");
   const [activity, setActivity] = useState("Preparando el proyecto");
-  const [streamingProgress, setStreamingProgress] = useState<{ title: string; detail: string } | null>(null);
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [bootstrapFailed, setBootstrapFailed] = useState(false);
   const streamingDraft = useRef("");
@@ -297,7 +296,6 @@ function App(): JSX.Element {
           streamingDraft.current += delta;
           const progress = extractStreamingProgress(streamingDraft.current);
           if (progress) {
-            setStreamingProgress(progress);
             updateProgress(progress.title, progress.detail);
           } else {
             updateProgress("Recibiendo hallazgos de OMP", "Cada hallazgo confirmado actualiza el centro y el mapa provisional.");
@@ -325,7 +323,6 @@ function App(): JSX.Element {
       } else if (event.type === "message_end") {
         const text = stringField(event.frame, "text") ?? streamingDraft.current;
         streamingDraft.current = "";
-        setStreamingProgress(null);
         if (text) {
           setMessages((current) => [...current, { author: "omp", text }]);
           setAssistantFindings((current) => [...extractAssistantFindings(text), ...current.filter((finding) => !finding.live)].slice(0, 8));
@@ -441,7 +438,6 @@ function App(): JSX.Element {
     setChatInput("");
     setChatError("");
     streamingDraft.current = "";
-    setStreamingProgress(null);
     streamingRevisionId.current = null;
     beginProgress();
     setSending(true);
@@ -628,7 +624,6 @@ function App(): JSX.Element {
                 </article>
                 <article className="panel-card pdac-details-card">
                   <div className="card-heading"><div><div className="card-kicker">DETALLE DINÁMICO</div><h2>{pdacPage === "overview" ? "Lo que va encontrando" : pdacPageLabels[pdacPage]}</h2></div><button className="pdac-clear-focus" onClick={() => openPdacPage("overview")}>Ver estado</button></div>
-                  {sending && <div className="pdac-live-progress" aria-live="polite"><span className="activity-dot purple" /><div><strong>{streamingProgress?.title ?? "OMP está leyendo el proyecto"}</strong><small>{streamingProgress?.detail ?? "El siguiente hallazgo actualizará el mapa provisional del centro."}</small></div><span className="pdac-progress-pulse" /></div>}
                   <div className="pdac-detail-list" aria-live="polite">
                     {visibleFindings.length > 0 ? visibleFindings.slice(0, 8).map((finding, index) => <div className={`pdac-detail-row ${finding.live ? "live" : ""}`} key={finding.id}><span className="pdac-detail-index">{String(index + 1).padStart(2, "0")}</span><div><div className="pdac-detail-title"><span className={`pdac-kind-badge ${finding.kind ?? "fact"}`}>{finding.kind === "inference" ? "INFERENCIA" : finding.kind === "unknown" ? "PENDIENTE" : "HECHO"}</span><strong>{finding.title}</strong>{finding.live && <span className="pdac-new-badge">NUEVO</span>}</div><small>{finding.detail}{finding.evidence ? ` · ${finding.evidence}` : ""}</small></div></div>) : <div className="assistant-empty"><strong>{sending ? "Esperando el siguiente hallazgo…" : "Esta área todavía no tiene evidencia."}</strong><small>{sending ? "OMP la añadirá cuando encuentre una señal verificable." : "El asistente la completará cuando encuentre información verificable en el proyecto."}</small></div>}
                   </div>

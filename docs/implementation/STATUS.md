@@ -3,18 +3,46 @@
 ## Estado actual
 
 ```yaml
-phase: '06'
+phase: '07'
 state: WAITING_USER_APPROVAL
-baselineCommit: 18d4333
+baselineCommit: pending
 branch: main
-gate: F06-PDAC-ARTIFACT-CANVASES
+gate: F07-REAL-OMP-PDAC-CANVAS
 userDecision: APPROVED
-nextPhase: '06'
-latestVerifiedCommit: e60e6ca
+nextPhase: '07'
+latestVerifiedCommit: pending
 manualVerification: required
 ```
-El flujo brownfield combina workbench, registro local de proyectos, workflows LangGraph y OMP real. Esta iteración queda lista para revisión manual; no se hizo push.
-El usuario autorizó continuar sin pausas entre gates. Fase 04 y los slices F05-T01..T10 quedan implementados; la revisión manual cubre la gestión de proyectos y la reanudación brownfield.
+El flujo F07 valida OMP real, personalidad con temporizador, persistencia de proyecto y lienzos Tldraw no vacíos después de cada actividad OMP. Esta iteración queda preparada para revisión manual; no se hizo push.
+El usuario pidió commits directos a `main`, sin push, y continuar sin pausas entre gates.
+
+## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
+
+| ID | Estado | Superficie | Output verificable |
+|---|---|---|---|
+| F07-T01 | done | timer de personalidad | `docs/implementation/evidence/F07-personality-timer-report.json`; OMP real, umbral 10 s |
+| F07-T02 | done | seguridad del chat | el timer no dispara con texto pendiente; prompts internos no aparecen |
+| F07-T03 | done | matriz brownfield/greenfield | `tests/e2e/pdac-matrix-20.ts`; 20/20 escenarios, 8 artefactos por escenario, `repositoriesModified: false` |
+| F07-T04 | done | comprobación post-OMP | el E2E espera mensaje OMP nuevo y `data-chat-status="settled"`; después exige una figura Tldraw visible o la vista editable de recuperación antes de capturar evidencia |
+| F07-T05 | done | edición Tldraw → PDAC | edición humana del shape actualiza `.product/generated/product-graph.json`; escrituras serializadas |
+| F07-T06 | done | reanudación | cierre y reapertura restauran proyecto y foco PDAC |
+| F07-T07 | done | manual | README documenta OMP real, timer, persistencia y edición del lienzo |
+
+### Evidencia y límite conocido
+
+- El E2E comprueba el lienzo después de cada respuesta OMP: espera `settled`, valida una figura Tldraw visible o activa la vista editable de recuperación, comprueba el foco y captura evidencia antes de continuar.
+- La matriz usa OMP real; no usa mocks ni prompts simulados. Los repositorios temporales se eliminan al finalizar y `repositoriesModified` es `false`.
+- Si Tldraw conserva figuras en su store pero no las pinta en el DOM, la UI no queda en blanco: muestra una vista de recuperación editable y mantiene el guardado de títulos hacia PDAC. Tldraw vuelve a ocultarla cuando su figura DOM aparece.
+
+### Checklist manual F07
+
+- [ ] Ejecutar `omp --version` y `omp login`; dejar un modelo configurado en OMP.
+- [ ] Lanzar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm desktop`; abrir ProductShape y elegir temporizador `10 s`.
+- [ ] Escribir una pregunta sin enviarla y esperar más de 10 s: no debe arrancar OMP ni desaparecer el texto pendiente.
+- [ ] Vaciar el composer; esperar la cuenta atrás, comprobar un único estado visible, actividad OMP y respuesta asentada en el chat.
+- [ ] Tras una respuesta OMP asentada, visitar cada botón PDAC: cada lienzo debe mostrar figuras visibles; si Tldraw tarda, debe aparecer la recuperación editable y no un canvas en blanco.
+- [ ] Editar el título de una figura y comprobar que `.product/generated/product-graph.json` cambia; cerrar y abrir la app para confirmar proyecto, foco y edición.
+- [ ] Revisar `docs/implementation/evidence/F07-personality-timer-01-countdown.png`, `F07-personality-timer-02-working.png` y una captura `F07-pdac-matrix-20/*-artifact-*.png`.
 
 ## Fase 04 — chat OMP visible
 

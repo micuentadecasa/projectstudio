@@ -1,0 +1,8 @@
+{
+  "mode": "real-omp",
+  "threshold": "10s",
+  "countdownAdvances": true,
+  "pendingComposerBlocksProactive": true,
+  "proactiveRunSettled": true,
+  "internalPromptHidden": true
+}

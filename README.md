@@ -90,6 +90,35 @@ Los artefactos del proyecto analizado no se borran ni se escriben durante esta g
 12. Si OMP devuelve Mermaid, comprueba el mapa visual en chat y canvas central.
 13. En el chat inicial confirma que aparece la personalidad `Arquitecto de Proyecto` y los objetivos `Entender el proyecto` y `Documentar arquitectura`.
 14. Pulsa uno de esos objetivos o escribe una pregunta nueva en el composer visible del panel derecho.
+## Verificar personalidad, persistencia y lienzos
+
+Las pruebas E2E usan OMP real; no hay mock de OMP. Requieren `omp login`, un modelo configurado y una red disponible para el proveedor:
+
+```bash
+pnpm test:e2e:personality-timer
+pnpm test:e2e:pdac-matrix-20
+```
+
+`test:e2e:personality-timer` selecciona el umbral de 10 segundos, verifica que la cuenta atrás avanza, que el trabajo proactivo termina y que el prompt interno no aparece en el chat.
+
+`test:e2e:pdac-matrix-20` crea 10 proyectos greenfield y 10 brownfield temporales. En cada caso ejecuta OMP, abre los ocho focos PDAC, exige un lienzo no vacío al terminar la actividad, edita un nodo tldraw, comprueba que el título llega a `.product/generated/product-graph.json`, cierra/reabre Electron y verifica proyecto, foco y persistencia. Las carpetas temporales se eliminan al terminar.
+
+Evidencia generada:
+
+```text
+docs/implementation/evidence/F07-personality-timer-report.json
+docs/implementation/evidence/F07-pdac-matrix-20/
+```
+
+Para probarlo a mano con Notes:
+
+1. Ejecuta `pnpm desktop:notes`.
+2. En ProductShape selecciona un foco PDAC; el centro debe mostrar un único estado de actividad y un lienzo tldraw.
+3. Deja seleccionado el umbral de `10 s` en el pie del chat y no escribas una pregunta: la personalidad puede proponer una revisión.
+4. Escribe una pregunta sin enviarla: el timer no debe enviar trabajo mientras el composer contiene texto pendiente.
+5. Espera a que OMP llegue a `Listo para continuar`; comprueba que el resultado aparece en el centro, no como prompt interno.
+6. Doble clic en una figura, cambia su texto y cierra/abre la app. El lienzo debe conservar el cambio; el grafo de proyecto debe reflejarlo.
+
 ## Cómo se ejecutan las peticiones
 
 El chat y los botones no llaman a OMP directamente. Envían un comando al proceso principal; el workflow LangGraph selecciona el flujo (brownfield, documentación de arquitectura o propuesta local/cloud) y sólo su nodo de agente invoca OMP. La UI muestra progreso resumido y resultados publicados; no muestra prompts, argumentos de herramientas ni frames RPC.
@@ -138,6 +167,8 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 - Evidencia Fase 03: `docs/implementation/phase-03-evidence.md`
 - Evidencia Fase 04: `docs/implementation/phase-04-evidence.md`
 - Checklist de gates: `docs/implementation/PHASE-GATES.md`
+- ProductShape canónico: `docs/product/README.md`
+
 
 ## Desarrollo
 

@@ -1,0 +1,528 @@
+{
+  "mode": "real-omp",
+  "scenarios": [
+    {
+      "slug": "greenfield-01",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-01-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-01: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-02",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-02-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-02: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-03",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-03-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-03: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-04",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-04-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-04: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-05",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-05-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-05: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-06",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-06-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-06: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-07",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-07-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-07: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-08",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-08-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-08: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-09",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-09-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-09: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "greenfield-10",
+      "kind": "greenfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/greenfield-10-artifact-editado.png",
+      "modifiedTitle": "Modificación greenfield-10: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-01",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-01-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-01: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-02",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-02-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-02: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-03",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-03-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-03: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-04",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-04-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-04: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-05",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-05-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-05: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-06",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-06-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-06: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-07",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-07-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-07: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-08",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-08-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-08: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-09",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-09-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-09: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    },
+    {
+      "slug": "brownfield-10",
+      "kind": "brownfield",
+      "initialScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-omp-01-inicial.png",
+      "modificationScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-omp-02-modificacion.png",
+      "artifactScreenshots": [
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-propósito.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-actores.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-casos-de-uso.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-dominio.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-journeys.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-reglas.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-requisitos.png",
+        "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-bounded-contexts.png"
+      ],
+      "diagramEditScreenshot": "docs/implementation/evidence/F07-pdac-matrix-20/brownfield-10-artifact-editado.png",
+      "modifiedTitle": "Modificación brownfield-10: confirmación humana",
+      "checks": {
+        "projectRestored": true,
+        "focusRestored": true,
+        "allArtifactScreensCaptured": true,
+        "diagramEditPersisted": true,
+        "noInternalPrompt": true,
+        "singleStatus": true
+      }
+    }
+  ],
+  "scenarioCount": 20,
+  "artifactCountPerScenario": 8,
+  "repositoriesModified": false
+}

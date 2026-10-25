@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -126,9 +126,10 @@ type ProjectRecord = {
 type ProjectRegistry = { version: 1; activeId: string; projects: ProjectRecord[] };
 
 function projectRegistryPath(): string {
-  const directory = join(workspaceRoot, ".tmp");
-  mkdirSync(directory, { recursive: true });
-  return join(directory, "projectstudio-projects.json");
+  const configuredPath = process.env.PROJECTSTUDIO_PROJECT_REGISTRY;
+  const path = configuredPath ? resolve(configuredPath) : join(workspaceRoot, ".tmp", "projectstudio-projects.json");
+  mkdirSync(dirname(path), { recursive: true });
+  return path;
 }
 
 async function detectProjectSignals(path: string): Promise<ProjectRecord["detected"]> {
@@ -312,6 +313,41 @@ async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
     return null;
   }
 }
+type PdacCanvasEdit = { nodeId?: string; page?: string; title?: string };
+let pdacEditQueue = Promise.resolve();
+async function writePdacCanvasEdit(input: PdacCanvasEdit): Promise<{ nodeId: string; title: string; updatedAt: string }> {
+  const title = input.title?.replace(/\s+/g, " ").trim();
+  const page = input.page?.trim();
+  if (!title || !page || title.length > 160) throw new Error("invalid PDAC canvas edit");
+  const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
+  mkdirSync(dirname(graphPath), { recursive: true });
+  let graph: { schema?: string; nodes?: ProjectPdacNode[]; edges?: ProjectPdacEdge[] };
+  try {
+    graph = JSON.parse(await readFile(graphPath, "utf8")) as typeof graph;
+  } catch {
+    graph = { schema: "product-definition-as-code/graph/v1alpha1", nodes: [], edges: [] };
+  }
+  const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+  const nodeId = input.nodeId?.trim() || `canvas-${page}-${createHash("sha256").update(title).digest("hex").slice(0, 12)}`;
+  const type = page === "actors" ? "actor" : page === "use-cases" ? "use-case" : page === "domains" ? "domain-term" : page === "journeys" ? "journey" : page === "rules" ? "business-rule" : page === "requirements" ? "requirement" : page === "contexts" ? "bounded-context" : "artifact";
+  const existing = nodes.find((node) => node.id === nodeId);
+  if (existing) {
+    existing.title = title;
+    existing.type ??= type;
+    existing.status ??= "draft";
+  } else {
+    nodes.push({ id: nodeId, type, title, status: "draft", path: `docs/product/model/${page}/canvas.md` });
+  }
+  const temporaryPath = `${graphPath}.${process.pid}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify({ ...graph, schema: graph.schema ?? "product-definition-as-code/graph/v1alpha1", nodes, edges: Array.isArray(graph.edges) ? graph.edges : [] }, null, 2)}\n`, "utf8");
+  await rename(temporaryPath, graphPath);
+  return { nodeId, title, updatedAt: (await stat(graphPath)).mtime.toISOString() };
+}
+function savePdacCanvasEdit(input: PdacCanvasEdit): Promise<{ nodeId: string; title: string; updatedAt: string }> {
+  const result = pdacEditQueue.then(() => writePdacCanvasEdit(input));
+  pdacEditQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
 async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }> {
   const signature = await projectContentSignature();
   const projectPdac = await readProjectPdacTruth();
@@ -471,6 +507,15 @@ function installChatIpc(): void {
       report: typeof input.report === "string" ? input.report : null,
       mermaid: typeof input.mermaid === "string" ? input.mermaid : null,
     });
+  });
+  ipcMain.handle("studio:project:pdac-edit", async (_event, value: unknown) => {
+    if (typeof value !== "object" || value === null) throw new Error("PDAC edit must be an object");
+    const input = value as { nodeId?: unknown; page?: unknown; title?: unknown };
+    const edit: PdacCanvasEdit = {};
+    if (typeof input.nodeId === "string") edit.nodeId = input.nodeId;
+    if (typeof input.page === "string") edit.page = input.page;
+    if (typeof input.title === "string") edit.title = input.title;
+    return savePdacCanvasEdit(edit);
   });
   ipcMain.handle("studio:project:bootstrap", async (_event, options: unknown) => {
     const resume = typeof options === "object" && options !== null && "resume" in options && options.resume === true;

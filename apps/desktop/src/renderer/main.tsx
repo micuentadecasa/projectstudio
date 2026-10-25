@@ -144,6 +144,13 @@ function readWorkspaceState(projectId: string): PersistedWorkspaceState | null {
     return null;
   }
 }
+const personalityIdleStorageKey = "projectstudio:personality-idle-ms";
+const personalityIdleOptions = [10_000, 20_000, 60_000, 300_000, 900_000] as const;
+const defaultPersonalityIdleMs = 20_000;
+function readPersonalityIdleMs(): number {
+  const configured = Number(localStorage.getItem(personalityIdleStorageKey));
+  return personalityIdleOptions.includes(configured as (typeof personalityIdleOptions)[number]) ? configured : defaultPersonalityIdleMs;
+}
 
 function reviewPrompt(section: Section): string {
   if (section === "ProductShape") return "PRODUCTSHAPE: analiza el producto usando primero docs/product y después el código para corroborar. Extrae propósito, actores, casos de uso, bounded contexts, reglas y restricciones. Devuelve hallazgos con rutas verificables y un único bloque Mermaid flowchart LR confirmado. No inventes componentes.";
@@ -216,35 +223,145 @@ function DiagramVisual({ source, canvas = false }: { source: string; canvas?: bo
   );
 }
 
+function canvasText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(canvasText).join("");
+  if (typeof value !== "object" || value === null) return "";
+  const record = value as Record<string, unknown>;
+  if (typeof record.text === "string") return record.text;
+  return Object.entries(record).filter(([key]) => key !== "attrs" && key !== "type").map(([, child]) => canvasText(child)).join("");
+}
 function PdacCanvas({ projectId, page, findings }: { projectId: string; page: PdacPage; findings: AssistantFinding[] }): JSX.Element {
   const persistenceKey = `projectstudio-pdac:v2:${projectId}:${page}`;
-  const seed = findings.slice(0, 8);
+  const hasFindings = findings.length > 0;
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const editorPageRef = useRef<PdacPage | null>(null);
+  const seed = hasFindings
+    ? findings.slice(0, 8)
+    : [{ id: `empty-${page}`, title: `Aún no hay hallazgos de ${pdacPageLabels[page].toLowerCase()}`, detail: "El lienzo queda preparado para el siguiente resultado verificable.", kind: "unknown" as const }];
+  const seedSignature = seed.map((finding) => finding.id).join("|");
+  const editorRef = useRef<{ getCurrentPageShapes: () => ReadonlyArray<{ id: string; props?: Record<string, unknown>; meta?: Record<string, unknown> }>; createShapes: (shapes: ReadonlyArray<Record<string, unknown>>) => void; deleteShapes: (ids: ReadonlyArray<string>) => void; zoomToFit: (options: { animation: { duration: number } }) => void; setCamera: (camera: { x: number; y: number; z: number }, options?: { immediate?: boolean }) => void } | null>(null);
+  const seedInterval = useRef<number | null>(null);
+  const viewportRecoveryAttempts = useRef(0);
+  const [fallbackVisible, setFallbackVisible] = useState(true);
+  const canvasListenerRef = useRef<(() => void) | undefined>(undefined);
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const seedTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const syncCanvas = (): void => {
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const edits = editor.getCurrentPageShapes().flatMap((shape) => {
+        const nodeId = typeof shape.meta?.pdacNodeId === "string" ? shape.meta.pdacNodeId : `canvas-${page}-${shape.id}`;
+        const title = canvasText(shape.props?.richText).replace(/\s+/g, " ").trim();
+        return title ? [{ nodeId, title }] : [];
+      });
+      void Promise.all(edits.map((edit) => window.studio.project.savePdacEdit({ ...edit, page })));
+    }, 250);
+  };
+  const createSeedShapes = (prefix = "pdac"): ReadonlyArray<Record<string, unknown>> => seed.map((finding, index) => ({
+    id: createShapeId(`${prefix}-${page}-${index}`),
+    type: "geo" as const,
+    x: 80 + (index % 3) * 300,
+    y: 80 + Math.floor(index / 3) * 150,
+    meta: { pdacNodeId: `canvas-${page}-${finding.id.replace(/[^a-z0-9_-]/gi, "-")}`, pdacPlaceholder: !hasFindings },
+    props: {
+      geo: "rectangle" as const,
+      w: 260,
+      h: 110,
+      richText: toRichText(finding.title.slice(0, 52)),
+      color: finding.kind === "unknown" ? "orange" as const : finding.kind === "inference" ? "violet" as const : "blue" as const,
+    },
+  }));
+  const seedCanvas = (): void => {
+    const editor = editorRef.current;
+    const stage = stageRef.current;
+    if (!editor || editorPageRef.current !== page) {
+      setFallbackVisible(true);
+      stage?.setAttribute("data-canvas-status", "editor-pending");
+      return;
+    }
+    const currentShapes = editor.getCurrentPageShapes();
+    stage?.setAttribute("data-shape-count", String(currentShapes.length));
+    const onlyPlaceholder = currentShapes.length > 0 && currentShapes.every((shape) => shape.meta?.pdacPlaceholder === true);
+    const hasSeedShape = currentShapes.some((shape) => typeof shape.meta?.pdacNodeId === "string" && shape.meta.pdacNodeId.startsWith(`canvas-${page}-`));
+    if (hasFindings && onlyPlaceholder) editor.deleteShapes(currentShapes.map((shape) => shape.id));
+    else if (hasSeedShape || currentShapes.length > 0) {
+      const renderedShapeCount = stage?.querySelectorAll('.tl-shape[data-shape-id^="shape:"]').length ?? 0;
+      if (renderedShapeCount === 0) {
+        setFallbackVisible(true);
+        viewportRecoveryAttempts.current += 1;
+        if (viewportRecoveryAttempts.current >= 6) {
+          editor.deleteShapes(currentShapes.map((shape) => shape.id));
+          editor.createShapes(createSeedShapes(`pdac-reseed-${Date.now()}`));
+          viewportRecoveryAttempts.current = 0;
+          stage?.setAttribute("data-canvas-status", "reseeded");
+          return;
+        }
+        editor.zoomToFit({ animation: { duration: 0 } });
+        stage?.setAttribute("data-canvas-status", "recovering-viewport");
+        return;
+      }
+      setFallbackVisible(false);
+      viewportRecoveryAttempts.current = 0;
+      stage?.setAttribute("data-canvas-status", "existing-shapes");
+      return;
+    }
+    setFallbackVisible(true);
+    editor.createShapes(createSeedShapes());
+    const createdShapeCount = editor.getCurrentPageShapes().length;
+    stage?.setAttribute("data-shape-count", String(createdShapeCount));
+    stage?.setAttribute("data-canvas-status", createdShapeCount > 0 ? "seeded" : "seed-empty");
+    editor.zoomToFit({ animation: { duration: 0 } });
+  };
+  useEffect(() => {
+    seedCanvas();
+  }, [page, seedSignature]);
+  useEffect(() => () => {
+    seedTimers.current.forEach((timer) => clearTimeout(timer));
+    if (seedInterval.current !== null) window.clearInterval(seedInterval.current);
+    clearTimeout(syncTimer.current);
+    canvasListenerRef.current?.();
+    viewportRecoveryAttempts.current = 0;
+    editorPageRef.current = null;
+    editorRef.current = null;
+  }, []);
   return (
-    <div className="pdac-tldraw-wrap" data-testid="pdac-tldraw-canvas">
+    <div className="pdac-tldraw-wrap" data-testid="pdac-tldraw-canvas" data-pdac-page={page} data-pdac-project={projectId}>
       <div className="pdac-canvas-toolbar"><span className="card-kicker">LIENZO PDAC · OFFLINE</span><span>Arrastra, edita y añade detalles. Se guarda en este dispositivo.</span></div>
-      <div className="pdac-tldraw-stage">
+      <div className="pdac-tldraw-stage" ref={stageRef}>
         <Tldraw
           persistenceKey={persistenceKey}
           assetUrls={offlineTldrawAssetUrls}
           locale="en"
           onMount={(editor) => {
-            if (editor.getCurrentPageShapes().length > 0 || seed.length === 0) return;
-            editor.createShapes(seed.map((finding, index) => ({
-              id: createShapeId(`pdac-${page}-${index}`),
-              type: "geo" as const,
-              x: 80 + (index % 3) * 300,
-              y: 80 + Math.floor(index / 3) * 150,
-              props: {
-                geo: "rectangle" as const,
-                w: 260,
-                h: 110,
-                richText: toRichText(finding.title.slice(0, 52)),
-                color: finding.kind === "unknown" ? "orange" as const : finding.kind === "inference" ? "violet" as const : "blue" as const,
-              },
-            })));
-            editor.zoomToFit({ animation: { duration: 0 } });
+            editorPageRef.current = page;
+            canvasListenerRef.current?.();
+            editorRef.current = editor;
+            canvasListenerRef.current = editor.store.listen(() => syncCanvas(), { scope: "document" });
+            seedCanvas();
+            seedTimers.current.forEach((timer) => clearTimeout(timer));
+            seedTimers.current = [250, 1000, 2500, 5000, 8000].map((delay) => window.setTimeout(seedCanvas, delay));
+            if (seedInterval.current !== null) window.clearInterval(seedInterval.current);
+            seedInterval.current = window.setInterval(seedCanvas, 500);
           }}
+          onChange={syncCanvas}
         />
+        {fallbackVisible && <div className="pdac-canvas-fallback" data-testid="pdac-canvas-fallback" aria-label="Vista verificable del lienzo">
+          {seed.map((finding, index) => <div
+            className="pdac-canvas-fallback-shape"
+            data-shape-id={`fallback:${page}:${finding.id}`}
+            key={finding.id}
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(event) => {
+              const title = event.currentTarget.textContent?.replace(/\s+/g, " ").trim() ?? "";
+              if (title && title !== finding.title) void window.studio.project.savePdacEdit({ page, nodeId: `canvas-${page}-${finding.id.replace(/[^a-z0-9_-]/gi, "-")}`, title });
+            }}
+            style={{ left: `${80 + (index % 3) * 300}px`, top: `${80 + Math.floor(index / 3) * 150}px` }}
+          >{finding.title}</div>)}
+        </div>}
       </div>
     </div>
   );
@@ -309,14 +426,33 @@ function App(): JSX.Element {
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const streamingDraft = useRef("");
   const lastInteractionAt = useRef(Date.now());
-  const sectionRef = useRef(section);
-  sectionRef.current = section;
+  const lastProactiveReviewAt = useRef(0);
   const userSelectedPdacPage = useRef(false);
+  const streamingRevisionId = useRef<string | null>(null);
+  const queuedObjective = useRef<{ prompt: string; workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning" } | null>(null);
+  const [personalityIdleMs, setPersonalityIdleMs] = useState(defaultPersonalityIdleMs);
+  const [personalityStatus, setPersonalityStatus] = useState<"waiting" | "working">("waiting");
+  const [personalityCountdownMs, setPersonalityCountdownMs] = useState(defaultPersonalityIdleMs);
   useEffect(() => {
     const container = chatMessagesRef.current;
     if (!container) return;
     container.scrollTop = container.scrollHeight;
   }, [messages, sending, activity]);
+  useEffect(() => {
+    setPersonalityIdleMs(readPersonalityIdleMs());
+  }, []);
+  useEffect(() => {
+    const updateCountdown = (): void => {
+      if (assistantFindings.length === 0 || personalityStatus === "working" || sending) {
+        setPersonalityCountdownMs(0);
+        return;
+      }
+      setPersonalityCountdownMs(Math.max(0, personalityIdleMs - (Date.now() - lastInteractionAt.current)));
+    };
+    updateCountdown();
+    const timer = window.setInterval(updateCountdown, 250);
+    return () => window.clearInterval(timer);
+  }, [assistantFindings.length, personalityIdleMs, personalityStatus, sending]);
   const [selectedObjective, setSelectedObjective] = useState<"understand" | "architecture" | "greenfield" | null>(null);
   const workspaceHydrating = useRef(false);
   const sendMessageRef = useRef<((prompt: string, workflow?: "brownfield-discovery" | "architecture-documentation" | "architecture-planning") => Promise<void>) | null>(null);
@@ -486,6 +622,7 @@ function App(): JSX.Element {
         }
       } else if (event.type === "session_settled") {
         setChatStatus("settled");
+        setPersonalityStatus("waiting");
         setActivity("Listo para continuar");
         setSending(false);
         const nextObjective = queuedObjective.current;
@@ -494,6 +631,7 @@ function App(): JSX.Element {
           window.setTimeout(() => void sendMessage(nextObjective.prompt, nextObjective.workflow), 0);
         }
       } else if (event.type === "warning" || event.type === "error") {
+        setPersonalityStatus("waiting");
         setChatError(humanizeError(event.message));
         setActivity("No se pudo completar la tarea");
         setChatStatus("failed");
@@ -667,21 +805,30 @@ function App(): JSX.Element {
   }
   sendMessageRef.current = sendMessage;
   useEffect(() => {
-    if (projectMode !== "brownfield" || section !== "ProductShape") return;
+    if (section !== "ProductShape" || assistantFindings.length === 0) return;
+    const intervalMs = Math.max(250, Math.min(5_000, personalityIdleMs / 4));
     const timer = window.setInterval(() => {
       const idleFor = Date.now() - lastInteractionAt.current;
       const sinceReview = Date.now() - lastProactiveReviewAt.current;
-      if (!sending && assistantFindings.length > 0 && idleFor >= 15 * 60 * 1000 && sinceReview >= 15 * 60 * 1000) {
+      if (!sending && !chatInput.trim() && idleFor >= personalityIdleMs && sinceReview >= personalityIdleMs) {
         lastProactiveReviewAt.current = Date.now();
-        void sendMessageRef.current?.("REVISIÓN PROACTIVA: repasa los hallazgos PDAC ya obtenidos, busca contradicciones, cambios recientes o incógnitas que bloqueen una decisión. No repitas el informe completo: devuelve como máximo tres observaciones y una pregunta concreta al usuario. No inventes datos.", "brownfield-discovery");
+        setPersonalityStatus("working");
+        const pdacComplete = pdacSignals.length > 0 && pdacSignals.every((signal) => signal.state === "found");
+        const prompt = pdacComplete
+          ? "PDAC COMPLETO: todos los focos visibles tienen hallazgos. Continúa con el siguiente trabajo de arquitectura sin modificar archivos: documenta la arquitectura existente si hay evidencia, o plantea una primera arquitectura candidata si es Greenfield. Separa hechos, decisiones e incógnitas y termina con una decisión concreta que el usuario pueda revisar."
+          : projectMode === "greenfield"
+            ? "REVISIÓN PROACTIVA GREENFIELD: revisa el caso de uso y los hechos, inferencias e incógnitas ya confirmados. Propón sólo la siguiente pregunta concreta que desbloquee el diseño PDAC. No inventes actores, reglas ni respuestas y no repitas el informe completo."
+            : "REVISIÓN PROACTIVA BROWNFIELD: repasa los hallazgos PDAC existentes, busca contradicciones, cambios recientes o incógnitas que bloqueen una decisión. Devuelve como máximo tres observaciones y una pregunta concreta. No inventes datos ni repitas el informe completo.";
+        const workflow = pdacComplete ? (projectMode === "greenfield" ? "architecture-planning" : "architecture-documentation") : "brownfield-discovery";
+        void sendMessageRef.current?.(prompt, workflow);
       }
-    }, 60_000);
+    }, intervalMs);
     return () => window.clearInterval(timer);
-  }, [assistantFindings.length, projectMode, section, sending]);
+  }, [assistantFindings.length, chatInput, pdacSignals, personalityIdleMs, projectMode, section, sending]);
 
 
   return (
-    <div className={`app-shell ${theme} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+    <div className={`app-shell ${theme} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} onPointerDown={() => { lastInteractionAt.current = Date.now(); }}>
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-mark">P</div>
@@ -802,7 +949,7 @@ function App(): JSX.Element {
                 <article className="panel-card pdac-diagram-card">
                   <div className="card-heading"><div><div className="card-kicker">{latestDiagram || assistantFindings.length > 0 ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"} </div><h2>{assistantFindings.length > 0 ? "Mapa editable de hallazgos" : latestDiagram ? pdacPage === "overview" ? selectedDiagramRevision?.label === "Mapa incremental de hallazgos" ? "Hallazgos que ya forman el mapa" : "Relaciones encontradas" : `Mapa de ${pdacPageLabels[pdacPage].toLowerCase()}` : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
                   {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones del mapa PDAC">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
-                  {pdacPage !== "overview" ? <PdacCanvas projectId={activeProjectId} page={pdacPage} findings={visibleFindings} /> : assistantFindings.length > 0 ? <PdacCanvas projectId={activeProjectId} page="overview" findings={assistantFindings} /> : latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
+                  {pdacPage !== "overview" ? <PdacCanvas key={`${activeProjectId}-${pdacPage}`} projectId={activeProjectId} page={pdacPage} findings={visibleFindings.length > 0 ? visibleFindings : assistantFindings.slice(0, 8)} /> : assistantFindings.length > 0 ? <PdacCanvas key={`${activeProjectId}-overview`} projectId={activeProjectId} page="overview" findings={assistantFindings} /> : latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
                   <button className="card-link" onClick={() => void sendMessage(pdacPage === "overview" ? reviewPrompt("ProductShape") : pdacEntityPrompt(pdacPage))}>{sending ? "Actualizando mapa…" : pdacPage === "overview" ? "Actualizar mapa con OMP" : `Actualizar mapa de ${pdacPageLabels[pdacPage].toLowerCase()}`} <span>→</span></button>
                 </article>
                 {pdacPage === "domains" && <article className="panel-card pdac-domain-glossary"><div className="card-heading"><div><div className="card-kicker">GLOSARIO DEL DOMINIO · EVIDENCIA</div><h2>Términos y significado</h2></div><span className="pdac-entity-count">{domainTerms.length} término{domainTerms.length === 1 ? "" : "s"}</span></div><div className="pdac-glossary-grid">{domainTerms.length > 0 ? domainTerms.map((term) => <div className="pdac-glossary-term" key={term.id}><strong>{term.title}</strong><p>{term.detail}</p>{term.evidence && <small>{term.evidence}</small>}</div>) : <div className="assistant-empty"><strong>Aún no hay términos confirmados.</strong><small>Actualiza el foco Dominio con OMP para construir este glosario.</small></div>}</div></article>}
@@ -865,7 +1012,7 @@ function App(): JSX.Element {
           </div>
           {chatError && <div className="chat-error" role="alert">{chatError}</div>}
           <div className="chat-composer"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Pregunta sobre este proyecto…" aria-label="Mensaje para OMP" rows={3} /><div className="composer-footer"><span className="composer-hint">{sending ? "Tarea en curso…" : "↵ enviar · ⇧↵ nueva línea"}</span><button className="send-button" onClick={() => void sendMessage()} aria-label="Enviar mensaje">↑</button></div></div>
-          <div className="chat-footer"><span className="safe-dot" /> Sesión local · {displayChatStatus(chatStatus)} <span className="footer-spacer" /><span>ProjectStudio</span></div>
+          <div className="chat-footer"><span className="safe-dot" /> Sesión local · {displayChatStatus(chatStatus)} <span className="personality-status" data-personality-status={personalityStatus}>✦ Personalidad {personalityStatus === "working" ? "trabajando" : "en espera"}</span>{personalityCountdownMs > 0 && <span className="personality-countdown" role="status" aria-live="polite">continúa en {Math.ceil(personalityCountdownMs / 1000)}s</span>}<label className="personality-setting">inactividad <select aria-label="Tiempo de inactividad de la personalidad" value={personalityIdleMs} onChange={(event) => { const milliseconds = Number(event.currentTarget.value); setPersonalityIdleMs(milliseconds); localStorage.setItem(personalityIdleStorageKey, String(milliseconds)); lastProactiveReviewAt.current = 0; lastInteractionAt.current = Date.now(); }}><option value={10_000}>10s</option><option value={20_000}>20s</option><option value={60_000}>1m</option><option value={300_000}>5m</option><option value={900_000}>15m</option></select></label><span className="footer-spacer" /><span>ProjectStudio</span></div>
         </aside>
       </div>
       <footer className="statusbar"><span><span className="status-dot" /> Proyecto listo</span><span>8 casos de uso</span><span>12 evidencias</span><span>rama main</span><span className="statusbar-spacer" /><span>Fase 04 · chat RPC</span></footer>

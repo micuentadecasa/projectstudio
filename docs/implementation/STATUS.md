@@ -5,12 +5,12 @@
 ```yaml
 phase: '07'
 state: WAITING_USER_APPROVAL
-baselineCommit: ea016ff
+baselineCommit: 97d808a
 branch: main
 gate: F07-REAL-OMP-PDAC-CANVAS
 userDecision: APPROVED
 nextPhase: '07'
-latestVerifiedCommit: ea016ff
+latestVerifiedCommit: 97d808a
 manualVerification: required
 ```
 El flujo F07 valida OMP real, personalidad con temporizador, persistencia de proyecto y lienzos Tldraw no vacíos después de cada actividad OMP. Esta iteración queda preparada para revisión manual; no se hizo push.

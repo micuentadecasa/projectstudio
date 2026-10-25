@@ -17,6 +17,7 @@ La recuperación autónoma resuelve ambigüedades sólo cuando `PROJECTSTUDIO_AU
 Notes tiene actualmente un grafo canónico recuperado de la evidencia OMP real: 47 nodos, 31 relaciones y ocho tipos PDAC (`actor=3`, `use-case=7`, `domain-term=14`, `journey=3`, `business-rule=6`, `constraint=5`, `functional-requirement=4`, `bounded-context=5`). Se eliminaron del grafo los nodos `canvas.md` transitorios y el texto de proceso.
 La prueba que inicia Notes completamente vacío y espera que el renderer reciba texto OMP ya pasa con OMP real: el worker normaliza los `text_delta`, publica un `message_end` siempre al cerrar la sesión y el preload expone el guardado de análisis que el renderer necesita. La promoción autónoma persiste el grafo canónico; el E2E pasó con candidatos y texto observables.
 
+El E2E de Notes usa ahora `PROJECTSTUDIO_PROJECT_REGISTRY` aislado y elimina su copia temporal al terminar; no puede cambiar el proyecto activo del usuario. La ejecución manual real posterior a este ajuste queda pendiente para no consumir otra llamada OMP; la verificación determinista y el lint del script pasan.
 ## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
 
 | ID | Estado | Superficie | Output verificable |

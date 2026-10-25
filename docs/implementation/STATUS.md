@@ -227,7 +227,7 @@ Bloqueos y límites:
 | F06-T11 | done | El foco actual ocupa la superficie principal; `Estado general` devuelve al resumen y Dominio muestra glosario debajo del grafo |
 | F06-T12 | done | La personalidad se separa en `PROJECT_ARCHITECT_PERSONA` y `PROJECT_ARCHITECT_CONDUCT`; incluye objetivo actual, foco único, hechos/inferencias y revisión proactiva |
 | F06-T13 | done | `docs/research/openclaw-personality.md` recoge fuentes first-party y justifica identidad separada, memoria trazable y proactividad como job |
-| F06-T14 | done | Cada artefacto PDAC tiene canvas tldraw offline editable, persistente por proyecto/entidad en IndexedDB; evidencia `F05-T06-notes-actors-tldraw.png` |
+| F06-T14 | done | Cada artefacto PDAC tiene canvas tldraw editable y persistente por proyecto/entidad en IndexedDB; traducción/assets de UI locales; evidencia `F05-T06-notes-actors-tldraw.png` |
 
 ### Verificación F06
 
@@ -243,7 +243,7 @@ pnpm test:e2e:greenfield
 `notes:diagram` pasó sin tokens: abre Notes, conserva el mapa general, navega a Casos de uso/Actores/Dominio, comprueba el glosario y monta un canvas tldraw offline por entidad. Guarda `F05-T06-notes-stored-diagram.png` y `F05-T06-notes-actors-tldraw.png`.
 `greenfield` pasó con OMP real: limpia la fixture, entrevista al usuario, guarda respuesta/captura y reabre el proyecto para recuperar el estado.
 La prueba brownfield `pnpm test:e2e:notes` pasó con OMP real: ProductShape y Arquitectura respondieron, la actividad central no duplica estado y el chat no expone el Mermaid completo. El escenario usa OMP real y consume la sesión configurada del usuario.
-La compilación de tldraw muestra avisos de bundle grande (2.0 MB minificado) y directivas `use client` ignoradas por Vite; no son errores de compilación. Debe vigilarse el tamaño en el siguiente corte.
+La compilación de tldraw muestra avisos de bundle grande (2.0 MB minificado) y directivas `use client` ignoradas por Vite; no son errores de compilación. La build no licenciada intenta además cargar su watermark CDN, pero la CSP lo bloquea y no impide editar ni persistir el lienzo; eliminar esa petición requiere licencia/configuración de tldraw o sustituir esa parte de la UI.
 
 ### Checklist manual F06
 

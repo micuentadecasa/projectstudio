@@ -131,6 +131,7 @@ OMP_BIN=/ruta/a/omp pnpm desktop
 | F05-T21 | done | páginas de entidad muestran conteo de hallazgos, filtro contextual y acción `Profundizar con OMP`; el estado Notes pasa a 5/5 áreas con evidencia |
 | F05-T22 | done | durante el streaming el centro muestra actividad segura del OMP, hallazgos parciales y mapa incremental de evidencia antes del Mermaid final |
 | F05-T23 | done | guía PDAC calcula el siguiente foco pendiente, alinea el contador con los hallazgos filtrables y elimina el status superior duplicado de ProductShape |
+| F05-T24 | done | resultado de descubrimiento resume hechos, inferencias y pendientes; cada hallazgo conserva su ruta de evidencia y etiqueta visible |
 ### Verificación F05
 
 ```bash
@@ -161,7 +162,7 @@ pnpm test:e2e:journey:scenarios
 
 Resultado observado: `existing-notes`, `new-project-reference`, `active-discovery-queues-objective` y `omp-error` pasan. El caso OMP ausente muestra una instrucción accionable y no expone `ENOENT`.
 
-La captura `F05-T06-notes-stored-diagram.png` confirma que el estado `Siguiente paso recomendado` aparece inmediatamente bajo el breadcrumb de `ProductShape`, antes del hero, métricas y diagrama.
+La captura `F05-T06-notes-stored-diagram.png` confirma que ProductShape concentra el estado en `PDAC · ESTADO ACTUAL`, la guía `GUÍA PDAC · SIGUIENTE PASO`, el resumen del descubrimiento y el mapa, sin duplicar el status superior.
 El recorrido asistido de ProductShape también se comprobó con el artefacto real almacenado:
 
 ```bash

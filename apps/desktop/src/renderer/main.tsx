@@ -5,8 +5,8 @@ import { extractMermaid, layoutDiagram, parseMermaid } from "./diagrams.js";
 import { visibleTextDelta } from "./chat-events.js";
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
-type ProgressStep = { id: string; title: string; detail: string; status: "active" | "done" };
-type PdacPage = "overview" | "use-cases" | "actors" | "rules" | "contexts";
+type FindingKind = "fact" | "inference" | "unknown";
+type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean };
 type PdacFocus = "all" | "use-cases" | "actors" | "rules" | "contexts";
 const pdacPageLabels: Record<PdacPage, string> = { overview: "ProductShape", "use-cases": "Casos de uso", actors: "Actores", rules: "Reglas y restricciones", contexts: "Bounded contexts" };
 
@@ -29,11 +29,12 @@ function extractAssistantFindings(text: string, includeSummary = true): Assistan
     const inlineDetail = boundary >= 0 ? normalizedTitle.slice(boundary).trim() : "";
     const detail = inlineDetail || lines.slice(index + 1).find((line) => !/^(?:#{1,3}\s+|\*\*|[-*]\s+)/.test(line))?.replace(/\*\*/g, "").trim();
     const evidence = /(?:[\w./-]+\.(?:md|tsx?|py|json))(?:[:#]\d+(?:-\d+)?)?/.exec(`${title} ${detail ?? ""}`)?.[0];
-    findings.push({ id: findingId(title, findings.length), title, detail: (detail ?? "Hallazgo publicado por el asistente.").slice(0, 180), evidence });
+    const cleanDetail = (detail ?? "Hallazgo publicado por el asistente.").slice(0, 180);
+    findings.push({ id: findingId(title, findings.length), title, detail: cleanDetail, evidence, kind: classifyFinding(title, cleanDetail) });
   }
   if (findings.length > 0) return findings;
   const summary = withoutDiagram.replace(/\s+/g, " ").trim();
-  return includeSummary && summary ? [{ id: "finding-summary", title: "Resultado de la revisión", detail: summary.slice(0, 180) }] : [];
+  return includeSummary && summary ? [{ id: "finding-summary", title: "Resultado de la revisión", detail: summary.slice(0, 180), kind: "fact" }] : [];
 }
 function extractStreamingProgress(text: string): { title: string; detail: string } | undefined {
   const lines = text
@@ -63,6 +64,12 @@ function buildEvidencePreviewMermaid(findings: AssistantFinding[]): string {
 function findingId(title: string, index: number): string {
   const slug = title.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/gi, "-").replace(/^-|-$/g, "").slice(0, 48);
   return `finding-${index}-${slug || "hallazgo"}`;
+}
+function classifyFinding(title: string, detail: string): FindingKind {
+  const text = `${title} ${detail}`.toLowerCase();
+  if (/incógnita|pendiente|por confirmar|desconocid|no se pudo verificar|falta evidencia/.test(text)) return "unknown";
+  if (/inferencia|parece|probable|sugiere|podría|se deduce/.test(text)) return "inference";
+  return "fact";
 }
 function detectLiveFinding(text: string): AssistantFinding | undefined {
   const heading = /(?:^|\n)\s*#{1,4}\s*(?:\d+\.\s*)?(Casos de uso principales|Actores|Propósito y frontera del producto|Bounded contexts|Reglas e invariantes|Restricciones)/im.exec(text);
@@ -392,6 +399,11 @@ function App(): JSX.Element {
     const pattern = patterns[pdacFocus];
     return assistantFindings.filter((finding) => pattern.test(`${finding.title} ${finding.detail}`));
   }, [assistantFindings, pdacFocus]);
+  const findingCounts = useMemo(() => assistantFindings.reduce((counts, finding) => {
+    const kind = finding.kind ?? "fact";
+    counts[kind] += 1;
+    return counts;
+  }, { fact: 0, inference: 0, unknown: 0 }), [assistantFindings]);
   const pdacState = sending ? "Exploración en curso" : assistantFindings.length > 0 ? "Borrador PDAC provisional" : "Sin evidencia publicada";
   const pdacStateDetail = sending
     ? "El asistente está contrastando ProductShape con el código y publicará cambios parciales."
@@ -606,6 +618,7 @@ function App(): JSX.Element {
                   </div>
                 </article>
                 <article className="panel-card pdac-guide-card"><div className="pdac-guide-copy"><div className="card-kicker">GUÍA PDAC · SIGUIENTE PASO</div><h2>{nextPdacSignal ? nextPdacGuidance.title : "Base PDAC cubierta"}</h2><p>{sending ? "Estoy contrastando la evidencia del repositorio. Verás aquí cada avance antes del resultado final." : nextPdacSignal ? nextPdacGuidance.detail : "Ya hay evidencia visible en las cinco áreas. Revisa los hallazgos antes de convertirlos en un modelo canónico."}</p></div>{nextPdacSignal && !sending && <button className="outline-button primary-review" onClick={() => void sendMessage(nextPdacGuidance.prompt, "brownfield-discovery")}>Trabajar este foco <span>→</span></button>}</article>
+                {assistantFindings.length > 0 && <article className="panel-card pdac-result-summary"><div><div className="card-kicker">RESULTADO DE DESCUBRIMIENTO</div><strong>{assistantFindings.length} hallazgo{assistantFindings.length === 1 ? "" : "s"} recopilado{assistantFindings.length === 1 ? "" : "s"}</strong><small>La clasificación es provisional y siempre conserva la evidencia de origen.</small></div><div className="pdac-kind-counts"><span className="fact"><b>{findingCounts.fact}</b> hechos</span><span className="inference"><b>{findingCounts.inference}</b> inferencias</span><span className="unknown"><b>{findingCounts.unknown}</b> pendientes</span></div></article>}
                 {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">ENTIDAD PDAC</div><h2>{pdacPageLabels[pdacPage]}</h2><p>Esta página reúne sólo la evidencia disponible para esta entidad. El asistente seguirá completándola sin inventar datos.</p><div className="pdac-entity-count">{visibleFindings.length} hallazgo{visibleFindings.length === 1 ? "" : "s"} visible{sending ? " · actualizando" : ""}</div></div><div className="pdac-entity-actions"><button className="outline-button primary-review" onClick={() => void sendMessage(pdacEntityPrompt(pdacPage))}>{sending ? "Analizando…" : "Profundizar con OMP"}</button><button className="outline-button" onClick={() => openPdacPage("overview")}>← Volver al estado</button></div></article>}
                 <article className="panel-card pdac-diagram-card">
                   <div className="card-heading"><div><div className="card-kicker">{latestDiagram ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"}</div><h2>{latestDiagram ? selectedDiagramRevision?.label === "Mapa incremental de hallazgos" ? "Hallazgos que ya forman el mapa" : "Relaciones encontradas" : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
@@ -617,7 +630,7 @@ function App(): JSX.Element {
                   <div className="card-heading"><div><div className="card-kicker">DETALLE DINÁMICO</div><h2>{pdacPage === "overview" ? "Lo que va encontrando" : pdacPageLabels[pdacPage]}</h2></div><button className="pdac-clear-focus" onClick={() => openPdacPage("overview")}>Ver estado</button></div>
                   {sending && <div className="pdac-live-progress" aria-live="polite"><span className="activity-dot purple" /><div><strong>{streamingProgress?.title ?? "OMP está leyendo el proyecto"}</strong><small>{streamingProgress?.detail ?? "El siguiente hallazgo actualizará el mapa provisional del centro."}</small></div><span className="pdac-progress-pulse" /></div>}
                   <div className="pdac-detail-list" aria-live="polite">
-                    {visibleFindings.length > 0 ? visibleFindings.slice(0, 8).map((finding, index) => <div className={`pdac-detail-row ${finding.live ? "live" : ""}`} key={finding.id}><span className="pdac-detail-index">{String(index + 1).padStart(2, "0")}</span><div><strong>{finding.title}</strong>{finding.live && <span className="pdac-new-badge">NUEVO</span>}<small>{finding.detail}{finding.evidence ? ` · ${finding.evidence}` : ""}</small></div></div>) : <div className="assistant-empty"><strong>{sending ? "Esperando el siguiente hallazgo…" : "Esta área todavía no tiene evidencia."}</strong><small>El asistente la completará cuando encuentre información verificable en el proyecto.</small></div>}
+                    {visibleFindings.length > 0 ? visibleFindings.slice(0, 8).map((finding, index) => <div className={`pdac-detail-row ${finding.live ? "live" : ""}`} key={finding.id}><span className="pdac-detail-index">{String(index + 1).padStart(2, "0")}</span><div><div className="pdac-detail-title"><span className={`pdac-kind-badge ${finding.kind ?? "fact"}`}>{finding.kind === "inference" ? "INFERENCIA" : finding.kind === "unknown" ? "PENDIENTE" : "HECHO"}</span><strong>{finding.title}</strong>{finding.live && <span className="pdac-new-badge">NUEVO</span>}</div><small>{finding.detail}{finding.evidence ? ` · ${finding.evidence}` : ""}</small></div></div>) : <div className="assistant-empty"><strong>{sending ? "Esperando el siguiente hallazgo…" : "Esta área todavía no tiene evidencia."}</strong><small>{sending ? "OMP la añadirá cuando encuentre una señal verificable." : "El asistente la completará cuando encuentre información verificable en el proyecto."}</small></div>}
                   </div>
                 </article>
               </section>

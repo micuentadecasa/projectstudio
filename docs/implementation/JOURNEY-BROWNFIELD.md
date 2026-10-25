@@ -40,6 +40,8 @@ El usuario no opera el CLI ni debe leer el repositorio entero. Su recorrido es:
 7. Pulsa **Casos de uso**, **Actores**, **Reglas y restricciones** o **Bounded contexts** para abrir la página de esa entidad desde el estado PDAC.
 8. Pregunta sobre un hallazgo o abre la evidencia. No se promueve nada al ProductShape canónico sin revisión posterior.
 
+El **resultado de descubrimiento** separa hechos, inferencias y pendientes. La persona puede revisar primero los hechos, discutir las inferencias y usar los pendientes para decidir el siguiente foco, sin confundir una hipótesis con documentación aceptada.
+
 Cada página de entidad filtra la evidencia disponible, muestra el número de hallazgos y conserva el contexto del mapa. **Profundizar con OMP** lanza una consulta específica para esa entidad; el usuario puede volver al estado PDAC sin perder la revisión seleccionada.
 
 Durante el análisis, la aplicación muestra la etapa y permite seguir navegando. El timeline entra con una transición breve y mantiene un pulso mientras OMP trabaja; no genera una revisión por cada token ni sustituye un modelo aceptado.

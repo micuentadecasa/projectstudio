@@ -23,6 +23,8 @@ try {
   await window.getByRole("heading", { name: "ProductShape" }).waitFor();
   await window.getByRole("heading", { name: "Lo que va encontrando" }).waitFor();
   await window.getByText("GUÍA PDAC · SIGUIENTE PASO", { exact: true }).waitFor();
+  await window.getByText("RESULTADO DE DESCUBRIMIENTO", { exact: true }).waitFor();
+  if (await window.locator(".pdac-kind-badge").count() === 0) throw new Error("Stored ProductShape findings have no evidence classification");
   if (await window.locator(".welcome-strip").count() !== 0) throw new Error("ProductShape still shows the duplicated upper status");
   if (await window.locator(".pdac-guide-card").count() !== 1) throw new Error("ProductShape guide card is missing");
   await window.getByRole("button", { name: /Casos de uso/ }).click();

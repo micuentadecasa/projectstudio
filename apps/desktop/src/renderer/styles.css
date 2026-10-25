@@ -226,7 +226,7 @@ h2 { font-size: 16px; }
 .pdac-tldraw-stage .tl-background { background: var(--surface-soft); }
 .pdac-canvas-fallback { position: absolute; inset: 0; z-index: 2; overflow: auto; padding: 34px 80px; background: var(--surface-soft); }
 .pdac-canvas-fallback::before { content: "Vista verificable de recuperación · el lienzo editable se está montando"; position: absolute; top: 12px; left: 16px; color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
-.pdac-canvas-fallback-shape { position: absolute; width: 260px; min-height: 76px; padding: 16px; border: 1px solid var(--accent); border-radius: 10px; background: var(--surface); color: var(--fg); box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 18%, transparent); font-size: 14px; line-height: 1.35; outline: none; }
+.pdac-canvas-fallback-shape { position: absolute; width: 260px; min-height: 76px; padding: 16px; border: 1px solid var(--accent); border-radius: 10px; background: var(--surface); color: var(--fg); box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 18%, transparent); font-size: 14px; line-height: 1.35; outline: none; white-space: pre-line; }
 .pdac-details-card { min-height: 0; padding: 20px; }
 .pdac-clear-focus { border: 0; color: var(--accent); background: transparent; font-size: 10px; }
 .pdac-live-progress { display: flex; align-items: center; gap: 10px; margin-top: 13px; padding: 11px 12px; border: 1px solid #7783ef55; border-radius: 8px; background: var(--accent-soft); animation: assistant-enter .35s ease both; }

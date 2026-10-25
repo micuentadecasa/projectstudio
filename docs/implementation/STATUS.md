@@ -14,11 +14,11 @@ manualVerification: required
 ```
 F07 implementa timer de personalidad, modo autónomo exclusivo de pruebas, persistencia ProductShape como verdad del proyecto, promoción estructurada OMP → drafts PDAC → CLI ProductShape, lienzos Tldraw offline y verificación DOM/estática. No se hizo push.
 La recuperación autónoma resuelve ambigüedades sólo cuando `PROJECTSTUDIO_AUTONOMOUS_RECOVERY=1`; el modo normal conserva la decisión para el usuario.
-Notes tiene actualmente un grafo canónico recuperado de la evidencia OMP real: 47 nodos, 31 relaciones y ocho tipos PDAC (`actor=3`, `use-case=7`, `domain-term=14`, `journey=3`, `business-rule=6`, `constraint=5`, `functional-requirement=4`, `bounded-context=5`). Se eliminaron del grafo los nodos `canvas.md` transitorios y el texto de proceso.
+Notes tiene actualmente un grafo canónico recompilado por ProductShape desde la documentación: 47 nodos, 35 relaciones y ocho tipos PDAC (`actor=3`, `use-case=7`, `domain-term=14`, `journey=3`, `business-rule=6`, `constraint=5`, `functional-requirement=4`, `bounded-context=5`). Se eliminaron del grafo los nodos `canvas.md` transitorios y el texto de proceso. Los tres journeys tienen ahora pasos de casos de uso explícitos.
 La prueba que inicia Notes completamente vacío y espera que el renderer reciba texto OMP ya pasa con OMP real: el worker normaliza los `text_delta`, publica un `message_end` siempre al cerrar la sesión y el preload expone el guardado de análisis que el renderer necesita. La promoción autónoma persiste el grafo canónico; el E2E pasó con candidatos y texto observables.
 
 El E2E de Notes usa ahora `PROJECTSTUDIO_PROJECT_REGISTRY` aislado y elimina su copia temporal al terminar; no puede cambiar el proyecto activo del usuario. La ejecución manual real posterior a este ajuste queda pendiente para no consumir otra llamada OMP; la verificación determinista y el lint del script pasan.
-Los lienzos por artefacto separan ahora los hallazgos por `pdacType`; un actor no aparece en Journeys ni Casos de uso aunque su detalle mencione esos términos. Se versionó la clave Tldraw a `v3` para descartar lienzos mezclados de la versión anterior. La personalidad no cambia de página si el usuario ya eligió un foco.
+Los lienzos por artefacto separan ahora los hallazgos por `pdacType`; un actor no aparece en Journeys ni Casos de uso aunque su detalle mencione esos términos. Se versionó la clave Tldraw a `v4` para descartar lienzos mezclados de versiones anteriores. Los journeys cargan sus pasos de casos de uso en las tarjetas editables. La personalidad no cambia de página si el usuario ya eligió un foco.
 ## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
 
 | ID | Estado | Superficie | Output verificable |
@@ -36,8 +36,8 @@ Los lienzos por artefacto separan ahora los hallazgos por `pdacType`; un actor n
 | F07-T11 | done | E2E OMP desde Notes vacío | `tests/e2e/notes-brownfield.ts`; OMP real entrega 6.000+ deltas, el renderer observa texto/candidatos y ProductShape persiste el grafo |
 | F07-T12 | done | integración ProductShape | foco PDAC intenta `prodshape graph --format json` (0.23.0) antes de llamar a OMP; el grafo vacío cae a recuperación OMP |
 | F07-T13 | done | promoción determinista | `tests/e2e/pdac-promotion.ts`; bridge real + ProductShape CLI, 5 nodos, 4 tipos y captura `F07-T13-pdac-promotion.png` |
-| F07-T14 | done | Notes canónico y persistencia | `F07-T14-notes-canonical-pdac.md`; 47 nodos, 31 relaciones, 8 tipos; reapertura y DOM en `test:e2e:notes:diagram` |
-| F07-T15 | done | extracción aislada | `tests/pdac-recovery.test.ts`; 2 tests de JSON PDAC y fallback de viñetas, sin Electron, ProductShape ni tokens |
+| F07-T14 | done | Notes canónico y persistencia | `F07-T14-notes-canonical-pdac.md`; 47 nodos, 35 relaciones, 8 tipos; reapertura y DOM en `test:e2e:notes:diagram` |
+| F07-T15 | done | extracción aislada | `tests/pdac-recovery.test.ts`; 3 tests de JSON PDAC, fallback de viñetas y separación de foco, sin Electron, ProductShape ni tokens |
 | F07-T16 | done | frontera OMP → renderer | `packages/orchestrator/src/omp-frame-text.ts`, `agent-worker.ts`, preload `saveAnalysis`; el cierre visible ya no depende de un frame final opcional |
 ### Evidencia y límite conocido
 
@@ -50,11 +50,12 @@ Los lienzos por artefacto separan ahora los hallazgos por `pdacType`; un actor n
 ### Checklist manual F07
 
 - [x] Ejecutar `pnpm verify:pdac:scenarios`; matriz determinista 20 escenarios, 10 Greenfield y 10 Brownfield.
-- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield`; Notes tiene 47 nodos canónicos, 31 relaciones, ocho tipos y cero nodos canvas-only.
+- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield`; Notes tiene 47 nodos canónicos, 35 relaciones, ocho tipos y cero nodos canvas-only.
 - [x] Ejecutar `pnpm verify:ui:static`, `pnpm typecheck`, `pnpm typecheck:desktop` y `pnpm lint`.
-- [x] Ejecutar `pnpm vitest run tests/pdac-recovery.test.ts`; extracción aislada: 2 tests, sin Electron ni tokens.
+- [x] Ejecutar `pnpm vitest run tests/pdac-recovery.test.ts`; extracción aislada: 3 tests, sin Electron ni tokens.
 - [x] Ejecutar `pnpm test:e2e:pdac:promotion`; promoción Electron/ProductShape sin OMP, 5 nodos y reapertura.
-- [x] Ejecutar `pnpm test:e2e:notes:diagram`; reapertura Notes, contadores 3/7/14/3/5, lienzos Actores/Dominio y tokens `false`.
+- [x] Ejecutar `pnpm test:e2e:notes:diagram`; ejecución previa pasó con Notes, contadores 3/7/14/3/5 y `tokensUsed: false`.
+- [ ] Repetir `pnpm test:e2e:notes:diagram` después de enriquecer el dominio y los journeys; la ejecución actual queda bloqueada en la carga del selector de proyecto, antes de ejercer el DOM.
 - [x] Ejecutar `pnpm exec tsx tests/e2e/notes-brownfield.ts` desde Notes vacío; OMP real, candidatos y `docs/product/model/` persistidos, y arquitectura posterior completada.
 - [ ] En una sesión manual con `PROJECTSTUDIO_AUTONOMOUS_RECOVERY` omitido, confirmar que el timer pausa y solicita decisión humana ante ambigüedad.
 
@@ -93,12 +94,12 @@ El producto requiere que el usuario tenga OMP instalado, autenticado y con model
 | `pnpm build:all` | pass | renderer, main Electron y worker compilados |
 | `pnpm typecheck && pnpm typecheck:desktop` | pass | contratos TypeScript |
 | `pnpm lint` | pass | ESLint sin errores |
-| `pnpm test` | pass | 10 archivos; 21 tests, incluyendo RPC y adapter OMP reales |
+| `pnpm test` | pass | 10 archivos; 22 tests, incluyendo RPC y adapter OMP reales |
 | `pnpm test:e2e:pdac:promotion` | pass | 5 nodos, 4 tipos, bridge real y ProductShape CLI |
-| `pnpm test:e2e:notes:diagram` | pass | 47 nodos canónicos, contadores 3/7/14/3/5, lienzos y reapertura; `tokensUsed: false` |
-| `pnpm verify:pdac:static -- --expect-brownfield` | pass | Notes: 47 nodos, 31 relaciones, ocho tipos y cero canvas-only |
+| `pnpm test:e2e:notes:diagram` | previously pass | 47 nodos canónicos, contadores 3/7/14/3/5, lienzos y reapertura; `tokensUsed: false`; la repetición posterior al cambio de hidratación quedó bloqueada antes de cargar el selector |
+| `pnpm verify:pdac:static -- --expect-brownfield` | pass | Notes: 47 nodos, 35 relaciones, ocho tipos y cero canvas-only |
 | `pnpm verify:ui:static` | pass | 12 contratos; no lanza Electron |
-| `pnpm vitest run tests/pdac-recovery.test.ts` | pass | 2 tests deterministas; JSON PDAC y fallback de viñetas sin Electron, ProductShape ni tokens |
+| `pnpm vitest run tests/pdac-recovery.test.ts` | pass | 3 tests deterministas; JSON PDAC, fallback de viñetas y separación de foco sin Electron, ProductShape ni tokens |
 | `pnpm verify:pdac:scenarios` | pass | 20 escenarios deterministas |
 | `pnpm test:f04` | pass histórico | Electron real, respuesta final visible y sin prompt interno |
 | `pnpm spike:omp-adapter --real` | pass histórico | OMP real: ready, streaming y settled |

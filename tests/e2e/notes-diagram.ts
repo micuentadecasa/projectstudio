@@ -1,10 +1,12 @@
 import { _electron as electron } from "playwright";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
 const notesRoot = process.env.PROJECTSTUDIO_NOTES_ROOT ?? "/Users/luis/projects/notes";
+const testRegistryPath = resolve(root, ".tmp/e2e-notes-diagram-registry.json");
 const main = resolve(root, "apps/desktop/dist/main.js");
+await rm(testRegistryPath, { force: true });
 const evidenceDirectory = resolve(root, "docs/implementation/evidence");
 await mkdir(evidenceDirectory, { recursive: true });
 const environment = Object.fromEntries(
@@ -14,7 +16,7 @@ const environment = Object.fromEntries(
 const app = await electron.launch({
   args: [main],
   cwd: root,
-  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_PROJECT_ROOT: notesRoot },
+  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_PROJECT_ROOT: notesRoot, PROJECTSTUDIO_PROJECT_REGISTRY: testRegistryPath },
 });
 try {
   const window = await app.firstWindow();
@@ -51,6 +53,8 @@ try {
   await window.screenshot({ path: resolve(root, actorCanvasScreenshot), fullPage: true });
   await window.getByRole("button", { name: "Dominio", exact: true }).click();
   await window.getByText("GLOSARIO DEL DOMINIO · EVIDENCIA", { exact: true }).waitFor();
+  const domainTerms = await window.locator(".pdac-glossary-term").count();
+  if (domainTerms !== 14) throw new Error(`Notes no hidrata los 14 términos de dominio en el glosario: ${domainTerms}`);
   await window.locator(".pdac-tldraw-stage").waitFor();
   await window.getByRole("button", { name: "← Estado general" }).click();
   await window.locator(".pdac-tldraw-stage").waitFor();
@@ -62,4 +66,5 @@ try {
   console.log(JSON.stringify({ mode: "real", projectRoot: notesRoot, tokensUsed: false, canonicalNodeCount: canonicalNodes.length, counts, screenshot, source }, null, 2));
 } finally {
   await app.close();
+  await rm(testRegistryPath, { force: true });
 }

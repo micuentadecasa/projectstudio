@@ -10,7 +10,7 @@ import { matchesPdacFocus, pdacSignalPatterns, type PdacFocus } from "./pdac-foc
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
 type FindingKind = "fact" | "inference" | "unknown";
-type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean; pdacType?: PdacCandidateType };
+type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean; pdacType?: PdacCandidateType; steps?: string[] };
 type ProactiveTarget = { label: string };
 const pdacArtifactTypeLabels: Record<string, string> = {
   actor: "Actor",
@@ -103,7 +103,7 @@ function findingsFromProjectArtifacts(artifacts: StudioPdacArtifact[]): Assistan
     const detail = `Estado ${artifact.status ?? "sin estado"} · evidencia ${artifact.path ?? "sin ruta"}`;
     const artifactTypeMap: Record<string, PdacCandidateType | undefined> = { "functional-requirement": "requirement", "quality-requirement": "requirement" };
     const pdacType = artifactTypeMap[artifact.type] ?? (pdacCandidateTypes[artifact.type as PdacCandidateType] ? artifact.type as PdacCandidateType : undefined);
-    return { id: artifact.id, title, detail, evidence: artifact.path, kind: classifyFinding(title, detail), pdacType };
+    return { id: artifact.id, title, detail, evidence: artifact.path, kind: classifyFinding(title, detail), pdacType, ...(artifact.steps ? { steps: artifact.steps } : {}) };
   });
 }
 const domainTermNames = ["Song", "Instrument Part", "Practice Score Revision", "Import Bundle", "ImportJob", "Practice Score JSON", "MusicXML", "playback", "SQLite repository", "biblioteca local", "canción", "progreso de práctica"];
@@ -256,7 +256,7 @@ function canvasText(value: unknown): string {
   return Object.entries(record).filter(([key]) => key !== "attrs" && key !== "type").map(([, child]) => canvasText(child)).join("");
 }
 function PdacCanvas({ projectId, page, findings }: { projectId: string; page: PdacPage; findings: AssistantFinding[] }): JSX.Element {
-  const persistenceKey = `projectstudio-pdac:v3:${projectId}:${page}`;
+  const persistenceKey = `projectstudio-pdac:v4:${projectId}:${page}`;
   const hasFindings = findings.length > 0;
   const stageRef = useRef<HTMLDivElement | null>(null);
   const editorPageRef = useRef<PdacPage | null>(null);
@@ -264,7 +264,10 @@ function PdacCanvas({ projectId, page, findings }: { projectId: string; page: Pd
     ? findings.slice(0, 8)
     : [{ id: `empty-${page}`, title: `Aún no hay hallazgos de ${pdacPageLabels[page].toLowerCase()}`, detail: "El lienzo queda preparado para el siguiente resultado verificable.", kind: "unknown" as const }];
   const nodeIdForFinding = (finding: AssistantFinding): string => /^(finding-|live-|canvas-|empty-)/.test(finding.id) ? `canvas-${page}-${finding.id.replace(/[^a-z0-9_-]/gi, "-")}` : finding.id;
-  const seedSignature = seed.map((finding) => finding.id).join("|");
+  const findingLabel = (finding: AssistantFinding): string => page === "journeys" && finding.steps?.length
+    ? [finding.title, ...finding.steps.map((step, index) => `${index + 1}. ${step}`)].join("\n")
+    : finding.title;
+  const seedSignature = seed.map((finding) => `${finding.id}:${finding.steps?.join("|") ?? ""}`).join("|");
   const editorRef = useRef<{ getCurrentPageShapes: () => ReadonlyArray<{ id: string; props?: Record<string, unknown>; meta?: Record<string, unknown> }>; createShapes: (shapes: ReadonlyArray<Record<string, unknown>>) => void; deleteShapes: (ids: ReadonlyArray<string>) => void; zoomToFit: (options: { animation: { duration: number } }) => void; setCamera: (camera: { x: number; y: number; z: number }, options?: { immediate?: boolean }) => void } | null>(null);
   const seedInterval = useRef<number | null>(null);
   const viewportRecoveryAttempts = useRef(0);
@@ -293,9 +296,9 @@ function PdacCanvas({ projectId, page, findings }: { projectId: string; page: Pd
     meta: { pdacNodeId: nodeIdForFinding(finding), pdacPlaceholder: !hasFindings },
     props: {
       geo: "rectangle" as const,
-      w: 260,
-      h: 110,
-      richText: toRichText(finding.title.slice(0, 52)),
+      w: page === "journeys" ? 300 : 260,
+      h: page === "journeys" && finding.steps?.length ? Math.min(210, 110 + finding.steps.length * 24) : 110,
+      richText: toRichText(findingLabel(finding).slice(0, page === "journeys" ? 280 : 52)),
       color: finding.kind === "unknown" ? "orange" as const : finding.kind === "inference" ? "violet" as const : "blue" as const,
     },
   }));
@@ -385,7 +388,7 @@ function PdacCanvas({ projectId, page, findings }: { projectId: string; page: Pd
               if (title && title !== finding.title) void window.studio.project.savePdacEdit({ page, nodeId: nodeIdForFinding(finding), title });
             }}
             style={{ left: `${80 + (index % 3) * 300}px`, top: `${80 + Math.floor(index / 3) * 150}px` }}
-          >{finding.title}</div>)}
+          >{findingLabel(finding)}</div>)}
         </div>}
       </div>
     </div>
@@ -771,6 +774,8 @@ function App(): JSX.Element {
     return assistantFindings.filter((finding) => matchesPdacFocus(finding, pdacFocus));
   }, [assistantFindings, pdacFocus]);
   const domainTerms = useMemo(() => {
+    const typedTerms = visibleFindings.filter((finding) => finding.pdacType === "domain-term");
+    if (typedTerms.length > 0) return typedTerms;
     const terms = extractDomainTerms(analysisReport);
     return terms.length > 0 ? terms : visibleFindings;
   }, [analysisReport, visibleFindings]);

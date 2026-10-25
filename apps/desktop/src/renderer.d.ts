@@ -20,7 +20,7 @@ type StudioProject = {
   lastOpenedAt: string;
   detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
-type StudioPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string };
+type StudioPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string; steps?: string[] };
 type StudioPdacCandidate = { type: "actor" | "use-case" | "domain-term" | "journey" | "business-rule" | "requirement" | "constraint" | "bounded-context"; title: string; detail: string; evidence?: string; confidence?: string; primaryActor?: string; definedIn?: string };
 type StudioProjectRegistry = { version: 1; activeId: string; projects: StudioProject[] };
 

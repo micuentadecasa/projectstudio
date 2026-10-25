@@ -259,10 +259,21 @@ async function startChat(): Promise<{ mode: string; status: string; projectName:
 }
 type ProjectPdacNode = { id?: string; type?: string; title?: string; status?: string; path?: string };
 type ProjectPdacEdge = { from?: string; to?: string; kind?: string };
-type ProjectPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string };
+type ProjectPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string; steps?: string[] };
 type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string; artifacts: ProjectPdacArtifact[] };
 type PdacCandidateInput = { type?: unknown; title?: unknown; detail?: unknown; evidence?: unknown; confidence?: unknown; primaryActor?: unknown; definedIn?: unknown };
 type PdacCandidate = { type: "actor" | "use-case" | "domain-term" | "journey" | "business-rule" | "requirement" | "constraint" | "bounded-context"; title: string; detail: string; evidence?: string; confidence?: string; primaryActor?: string; definedIn?: string };
+async function journeyStepTitles(node: ProjectPdacNode, graphNodes: Array<ProjectPdacNode & { id: string; title: string }>): Promise<string[]> {
+  if (node.type !== "journey" || !node.path) return [];
+  try {
+    const content = await readFile(join(projectRoot, node.path), "utf8");
+    const stepIds = [...content.matchAll(/^\s*-\s*use-case:\s*([A-Z0-9-]+)\s*$/gm)].map((match) => match[1]).filter((id): id is string => Boolean(id));
+    const titles = new Map(graphNodes.map((candidate) => [candidate.id, candidate.title]));
+    return stepIds.map((id) => titles.get(id) ?? id);
+  } catch {
+    return [];
+  }
+}
 
 async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
   const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
@@ -312,12 +323,14 @@ async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
       }
     }
     const updatedAt = (await stat(graphPath)).mtime.toISOString();
-    const artifacts = graphNodes.map((node) => {
+    const artifacts = await Promise.all(graphNodes.map(async (node) => {
       const artifact: ProjectPdacArtifact = { id: node.id, type: node.type ?? "artifact", title: node.title };
       if (typeof node.status === "string") artifact.status = node.status;
       if (typeof node.path === "string") artifact.path = node.path;
+      const steps = await journeyStepTitles(node, graphNodes);
+      if (steps.length > 0) artifact.steps = steps;
       return artifact;
-    });
+    }));
     return { report, mermaid, updatedAt, artifacts };
   } catch {
     return null;

@@ -27,7 +27,7 @@ Modo: recuperación autónoma de pruebas; los nodos quedan como `draft` para rev
 | bounded-context | 5 |
 | **Total** | **47** |
 
-Grafo recompilado: 47 nodos, 31 relaciones y 0 nodos `canvas.md` contados como modelo canónico.
+Grafo recompilado: 47 nodos, 35 relaciones y 0 nodos `canvas.md` contados como modelo canónico. Los tres journeys tienen pasos explícitos hacia casos de uso confirmados.
 
 ## Evidencia visual
 

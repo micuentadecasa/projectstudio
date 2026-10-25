@@ -10,7 +10,7 @@ branch: main
 gate: F06-PDAC-ARTIFACT-CANVASES
 userDecision: APPROVED
 nextPhase: '06'
-latestVerifiedCommit: 892a97d
+latestVerifiedCommit: f0ee356
 manualVerification: required
 ```
 El flujo brownfield combina workbench, registro local de proyectos, workflows LangGraph y OMP real. Esta iteración queda lista para revisión manual; no se hizo push.

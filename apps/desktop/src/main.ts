@@ -275,6 +275,28 @@ async function journeyStepTitles(node: ProjectPdacNode, graphNodes: Array<Projec
     return [];
   }
 }
+async function readArtifactDocumentation(node: ProjectPdacNode): Promise<{ description?: string; nomenclature?: Record<string, string> }> {
+  if (!node.path) return {};
+  try {
+    const content = await readFile(join(projectRoot, node.path), "utf8");
+    const frontmatter = /^---\s*\n([\s\S]*?)\n---\s*/.exec(content)?.[1] ?? "";
+    const nomenclature: Record<string, string> = {};
+    for (const line of frontmatter.split(/\r?\n/)) {
+      const match = /^\s*([a-z][\w-]*):\s*(.+?)\s*$/.exec(line);
+      const key = match?.[1];
+      const rawValue = match?.[2];
+      if (!key || !rawValue || key === "provenance") continue;
+      const value = rawValue.replace(/^["']|["']$/g, "").trim();
+      if (value) nomenclature[key] = value;
+    }
+    const sections = content.replace(/^---[\s\S]*?---\s*/, "").split(/^##\s+/m).slice(1);
+    const preferred = sections.find((section) => /^(Purpose|Description|Goals|Responsibilities|Definition|Rationale|Responsibility)\b/i.test(section));
+    const description = (preferred ?? sections[0] ?? "").split(/\r?\n/).slice(1).filter((line) => line.trim() && !line.trim().startsWith("-")).join(" ").replace(/\s+/g, " ").trim().slice(0, 480);
+    return { ...(description ? { description } : {}), ...(Object.keys(nomenclature).length > 0 ? { nomenclature } : {}) };
+  } catch {
+    return {};
+  }
+}
 
 async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
   const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
@@ -324,15 +346,21 @@ async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
       }
     }
     const updatedAt = (await stat(graphPath)).mtime.toISOString();
+    const relations = Array.isArray(graph.edges)
+      ? graph.edges.flatMap((edge) => edge.from && edge.to && graphNodeIds.has(edge.from) && graphNodeIds.has(edge.to) ? [{ from: edge.from, to: edge.to, kind: edge.kind ?? "relación" }] : [])
+      : [];
     const artifacts = await Promise.all(graphNodes.map(async (node) => {
       const artifact: ProjectPdacArtifact = { id: node.id, type: node.type ?? "artifact", title: node.title };
       if (typeof node.status === "string") artifact.status = node.status;
       if (typeof node.path === "string") artifact.path = node.path;
       const steps = await journeyStepTitles(node, graphNodes);
       if (steps.length > 0) artifact.steps = steps;
+      const documentation = await readArtifactDocumentation(node);
+      if (documentation.description) artifact.description = documentation.description;
+      if (documentation.nomenclature) artifact.nomenclature = documentation.nomenclature;
       return artifact;
     }));
-    return { report, mermaid, updatedAt, artifacts };
+    return { report, mermaid, updatedAt, artifacts, relations };
   } catch {
     return null;
   }
@@ -458,7 +486,7 @@ function pdacDocument(candidate: PdacCandidate, journeyStepId: string, requireme
   ].filter((line) => line.length > 0).join("\n");
   return { id, path, content };
 }
-async function promotePdacCandidates(inputs: PdacCandidateInput[]): Promise<{ ok: boolean; created: number; artifacts?: ProjectPdacArtifact[]; mermaid?: string | null; error?: string }> {
+async function promotePdacCandidates(inputs: PdacCandidateInput[]): Promise<{ ok: boolean; created: number; artifacts?: ProjectPdacArtifact[]; relations?: ProjectPdacRelation[]; mermaid?: string | null; error?: string }> {
   const candidates = inputs.map(normalizePdacCandidate).filter((candidate): candidate is PdacCandidate => candidate !== null);
   const unique = [...new Map(candidates.map((candidate) => [`${candidate.type}:${slugifyPdac(candidate.title)}`, candidate])).values()];
   const needsFallbackActor = unique.some((candidate) => candidate.type === "use-case" && !candidate.primaryActor);
@@ -475,7 +503,7 @@ async function promotePdacCandidates(inputs: PdacCandidateInput[]): Promise<{ ok
   if (needsFallbackUseCase) {
     unique.push({ type: "use-case", title: "Recovered PDAC journey step", detail: "Paso provisional para mantener una referencia ProductShape válida durante la recuperación.", confidence: "medium", primaryActor: "ACT-PRODUCT-USER" });
   }
-  if (unique.length === 0) return { ok: true, created: 0, artifacts: [], mermaid: null };
+  if (unique.length === 0) return { ok: true, created: 0, artifacts: [], relations: [], mermaid: null };
   const journeyStepId = pdacId(unique.find((candidate) => candidate.type === "use-case") ?? { type: "use-case", title: "Recovered PDAC journey step", detail: "", confidence: "medium" });
   const requirementSourceId = pdacId(unique.find((candidate) => candidate.type === "use-case" || candidate.type === "business-rule" || candidate.type === "constraint") ?? { type: "use-case", title: "Recovered PDAC journey step", detail: "", confidence: "medium" });
   let created = 0;
@@ -497,7 +525,7 @@ async function promotePdacCandidates(inputs: PdacCandidateInput[]): Promise<{ ok
   if (!result.ok) return { ok: false, created, error: result.error ?? "ProductShape no pudo validar los drafts PDAC." };
   const truth = await readProjectPdacTruth();
   if (!truth) return { ok: false, created, error: "ProductShape no devolvió nodos después de promover los drafts." };
-  return { ok: true, created, artifacts: truth.artifacts, mermaid: truth.mermaid };
+  return { ok: true, created, artifacts: truth.artifacts, relations: truth.relations, mermaid: truth.mermaid };
 }
 type PdacCanvasEdit = { nodeId?: string; page?: string; title?: string };
 let pdacEditQueue = Promise.resolve();
@@ -534,11 +562,11 @@ function savePdacCanvasEdit(input: PdacCanvasEdit): Promise<{ nodeId: string; ti
   pdacEditQueue = result.then(() => undefined, () => undefined);
   return result;
 }
-async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: ProjectPdacArtifact[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }> {
+async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: ProjectPdacArtifact[]; relations?: ProjectPdacRelation[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }> {
   const signature = await projectContentSignature();
   const projectPdac = await readProjectPdacTruth();
   if (projectPdac) {
-    return { projectName, mermaid: projectPdac.mermaid, report: projectPdac.report, artifacts: projectPdac.artifacts, updatedAt: projectPdac.updatedAt, stale: false, source: "project-pdac" };
+    return { projectName, mermaid: projectPdac.mermaid, report: projectPdac.report, artifacts: projectPdac.artifacts, relations: projectPdac.relations, updatedAt: projectPdac.updatedAt, stale: false, source: "project-pdac" };
   }
   try {
     const saved = JSON.parse(await readFile(projectAnalysisPath(), "utf8")) as StoredProjectAnalysis;
@@ -686,7 +714,7 @@ function installChatIpc(): void {
       await rm(join(projectRoot, ".product", "generated"), { recursive: true, force: true });
       return { ok: false, error: "ProductShape devolvió un grafo vacío; se necesita una revisión de OMP para recuperar evidencia." };
     }
-    return { ok: true, artifacts: truth.artifacts, mermaid: truth.mermaid };
+    return { ok: true, artifacts: truth.artifacts, relations: truth.relations, mermaid: truth.mermaid };
   });
   ipcMain.handle("studio:project:pdac-promote", async (_event, value: unknown) => {
     if (!Array.isArray(value)) throw new Error("PDAC candidates must be an array");

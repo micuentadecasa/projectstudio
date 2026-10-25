@@ -10,7 +10,7 @@ import { matchesPdacFocus, pdacSignalPatterns, type PdacFocus } from "./pdac-foc
 type Message = { author: "user" | "omp"; text: string; streaming?: boolean };
 type DiagramRevision = { id: string; source: string; label: string; status: "stored" | "provisional"; createdAt: string };
 type FindingKind = "fact" | "inference" | "unknown";
-type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean; pdacType?: PdacCandidateType; steps?: string[] };
+type AssistantFinding = { id: string; title: string; detail: string; evidence?: string; kind?: FindingKind; live?: boolean; pdacType?: PdacCandidateType; steps?: string[]; status?: string; path?: string; nomenclature?: Record<string, string> };
 type ProactiveTarget = { label: string };
 const pdacPageLabels: Record<PdacPage, string> = { overview: "ProductShape", "use-cases": "Casos de uso", actors: "Actores", domains: "Dominio", journeys: "Journeys", rules: "Reglas y restricciones", requirements: "Requisitos", contexts: "Bounded contexts" };
 function PdacIcon({ id }: { id: string }): JSX.Element {
@@ -114,10 +114,10 @@ function findingsFromProjectArtifacts(artifacts: StudioPdacArtifact[]): Assistan
   return artifacts.map((artifact) => {
     const label = pdacArtifactTypeLabels[artifact.type] ?? artifact.type;
     const title = `${label}: ${artifact.title}`;
-    const detail = `Estado ${artifact.status ?? "sin estado"} · evidencia ${artifact.path ?? "sin ruta"}`;
+    const detail = artifact.description ?? `Estado ${artifact.status ?? "sin estado"} · evidencia ${artifact.path ?? "sin ruta"}`;
     const artifactTypeMap: Record<string, PdacCandidateType | undefined> = { "functional-requirement": "requirement", "quality-requirement": "requirement" };
     const pdacType = artifactTypeMap[artifact.type] ?? (pdacCandidateTypes[artifact.type as PdacCandidateType] ? artifact.type as PdacCandidateType : undefined);
-    return { id: artifact.id, title, detail, evidence: artifact.path, kind: classifyFinding(title, detail), pdacType, ...(artifact.steps ? { steps: artifact.steps } : {}) };
+    return { id: artifact.id, title, detail, evidence: artifact.path, kind: classifyFinding(title, detail), pdacType, status: artifact.status, path: artifact.path, nomenclature: artifact.nomenclature, ...(artifact.steps ? { steps: artifact.steps } : {}) };
   });
 }
 const domainTermNames = ["Song", "Instrument Part", "Practice Score Revision", "Import Bundle", "ImportJob", "Practice Score JSON", "MusicXML", "playback", "SQLite repository", "biblioteca local", "canción", "progreso de práctica"];
@@ -269,7 +269,7 @@ function canvasText(value: unknown): string {
   if (typeof record.text === "string") return record.text;
   return Object.entries(record).filter(([key]) => key !== "attrs" && key !== "type").map(([, child]) => canvasText(child)).join("");
 }
-function PdacCanvas({ projectId, page, findings }: { projectId: string; page: PdacPage; findings: AssistantFinding[] }): JSX.Element {
+function PdacCanvas({ projectId, page, findings, onSelectNode }: { projectId: string; page: PdacPage; findings: AssistantFinding[]; onSelectNode?: (nodeId: string | null) => void }): JSX.Element {
   const persistenceKey = `projectstudio-pdac:v5:${projectId}:${page}`;
   const hasFindings = findings.length > 0;
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -381,7 +381,15 @@ function PdacCanvas({ projectId, page, findings }: { projectId: string; page: Pd
             editorPageRef.current = page;
             canvasListenerRef.current?.();
             editorRef.current = editor;
-            canvasListenerRef.current = editor.store.listen(() => syncCanvas(), { scope: "document" });
+            const notifySelection = (): void => {
+              const selectedId = editor.getSelectedShapeIds()[0];
+              const shape = selectedId ? editor.getShape(selectedId) : undefined;
+              const nodeId = shape && typeof shape.meta?.pdacNodeId === "string" ? shape.meta.pdacNodeId : null;
+              onSelectNode?.(nodeId);
+            };
+            const documentListener = editor.store.listen(() => syncCanvas(), { scope: "document" });
+            const selectionListener = editor.store.listen(notifySelection, { scope: "session" });
+            canvasListenerRef.current = () => { documentListener(); selectionListener(); onSelectNode?.(null); };
             seedCanvas();
             seedTimers.current.forEach((timer) => clearTimeout(timer));
             seedTimers.current = [250, 1000, 2500, 5000, 8000].map((delay) => window.setTimeout(seedCanvas, delay));
@@ -401,6 +409,7 @@ function PdacCanvas({ projectId, page, findings }: { projectId: string; page: Pd
               const title = event.currentTarget.textContent?.replace(/\s+/g, " ").trim() ?? "";
               if (title && title !== finding.title) void window.studio.project.savePdacEdit({ page, nodeId: nodeIdForFinding(finding), title });
             }}
+            onClick={() => onSelectNode?.(nodeIdForFinding(finding))}
             style={{ left: `${80 + (index % 3) * 300}px`, top: `${80 + Math.floor(index / 3) * 150}px` }}
           >{findingLabel(finding)}</div>)}
         </div>}
@@ -440,6 +449,40 @@ function humanizeError(error: unknown): string {
   if (/login|auth|credential|model/i.test(message)) return "OMP necesita autenticación y un modelo configurado. Ejecuta `omp login` y vuelve a intentarlo.";
   return message;
 }
+function compactGraphLabel(value: string, max = 34): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+function PdacRelationshipGraph({ selected, relations, nodes }: { selected: AssistantFinding; relations: StudioPdacRelation[]; nodes: AssistantFinding[] }): JSX.Element {
+  const linked = relations.filter((relation) => relation.from === selected.id || relation.to === selected.id).slice(0, 8).map((relation) => {
+    const neighborId = relation.from === selected.id ? relation.to : relation.from;
+    return { relation, node: nodes.find((candidate) => candidate.id === neighborId) };
+  }).filter((item): item is { relation: StudioPdacRelation; node: AssistantFinding } => Boolean(item.node));
+  const width = 760;
+  const center = { x: 250, y: 94, w: 260, h: 74 };
+  const height = linked.length > 4 ? 330 : 240;
+  return <div className="pdac-relationship-visual">
+    {linked.length === 0 ? <div className="pdac-relationship-empty">Este elemento todavía no tiene relaciones publicadas en el grafo ProductShape.</div> : <svg className="pdac-relationship-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Relaciones de ${selected.title}`}>
+      {linked.map(({ relation, node }, index) => {
+        const side = index % 2 === 0 ? "left" : "right";
+        const row = Math.floor(index / 2);
+        const x = side === "left" ? 18 : 482;
+        const y = 16 + row * 112;
+        const anchorX = side === "left" ? x + 250 : x;
+        const centerX = side === "left" ? center.x : center.x + center.w;
+        return <g key={`${relation.from}-${relation.to}-${relation.kind}`}>
+          <line className="pdac-relationship-line" x1={anchorX} y1={y + 35} x2={centerX} y2={center.y + 37} />
+          <text className="pdac-relationship-kind" x={(anchorX + centerX) / 2} y={(y + center.y + 74) / 2}>{compactGraphLabel(relation.kind, 22)}</text>
+          <rect className="pdac-relationship-node" x={x} y={y} width="250" height="70" rx="8" />
+          <text className="pdac-relationship-node-title" x={x + 12} y={y + 28}>{compactGraphLabel(node.title, 32)}</text>
+          <text className="pdac-relationship-node-type" x={x + 12} y={y + 49}>{pdacArtifactTypeLabels[node.pdacType ?? ""] ?? "Artefacto PDAC"}</text>
+        </g>;
+      })}
+      <rect className="pdac-relationship-center" x={center.x} y={center.y} width={center.w} height={center.h} rx="9" />
+      <text className="pdac-relationship-center-title" x={center.x + 14} y={center.y + 28}>{compactGraphLabel(selected.title, 34)}</text>
+      <text className="pdac-relationship-center-type" x={center.x + 14} y={center.y + 51}>{pdacArtifactTypeLabels[selected.pdacType ?? ""] ?? "Artefacto PDAC"} · seleccionado</text>
+    </svg>}
+  </div>;
+}
 function App(): JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -454,6 +497,8 @@ function App(): JSX.Element {
   const [diagramRevisions, setDiagramRevisions] = useState<DiagramRevision[]>([]);
   const [selectedDiagramRevisionId, setSelectedDiagramRevisionId] = useState<string | null>(null);
   const [assistantFindings, setAssistantFindings] = useState<AssistantFinding[]>([]);
+  const [pdacRelations, setPdacRelations] = useState<StudioPdacRelation[]>([]);
+  const [selectedPdacNodeId, setSelectedPdacNodeId] = useState<string | null>(null);
   const [pdacFocus, setPdacFocus] = useState<PdacFocus>("all");
   const [pdacPage, setPdacPage] = useState<PdacPage>("overview");
   const [activeTab, setActiveTab] = useState("Resumen");
@@ -487,6 +532,9 @@ function App(): JSX.Element {
   useEffect(() => {
     pdacPageRef.current = pdacPage;
   }, [pdacPage]);
+  useEffect(() => {
+    setSelectedPdacNodeId(null);
+  }, [activeProjectId, pdacPage]);
   useEffect(() => {
     const container = chatMessagesRef.current;
     if (!container) return;
@@ -573,7 +621,7 @@ function App(): JSX.Element {
     const recoveredFindings = analysis.artifacts?.length ? findingsFromProjectArtifacts(analysis.artifacts) : analysis.report ? extractAssistantFindings(analysis.report, true, analysis.source === "project-pdac" ? 64 : 8) : [];
     setAnalysisReport(analysis.report ?? "");
     setStoredDiagram(analysis.mermaid);
-    setAssistantFindings(recoveredFindings);
+    setPdacRelations(analysis.relations ?? []);
     setAnalysisStale(Boolean(analysis.stale));
     setMessages(recoveredFindings.length > 0
       ? [{ author: "omp", text: analysis.source === "project-pdac"
@@ -618,12 +666,12 @@ function App(): JSX.Element {
       const result = await window.studio.project.promotePdac(candidates);
       if (!result.ok) {
         setChatError(result.error ?? "No se pudo guardar la propuesta PDAC.");
-        setActivity("La propuesta PDAC necesita revisión");
         return;
       }
       if (result.artifacts?.length) {
         setAssistantFindings(findingsFromProjectArtifacts(result.artifacts));
       }
+      setPdacRelations(result.relations ?? []);
       if (result.mermaid) {
         const revision: DiagramRevision = { id: `pdac-${Date.now()}`, source: result.mermaid, label: "Grafo ProductShape actualizado", status: "stored", createdAt: "generado por ProductShape" };
         setStoredDiagram(result.mermaid);
@@ -793,6 +841,8 @@ function App(): JSX.Element {
     const terms = extractDomainTerms(analysisReport);
     return terms.length > 0 ? terms : visibleFindings;
   }, [analysisReport, visibleFindings]);
+  const selectedPdacFinding = useMemo(() => selectedPdacNodeId ? assistantFindings.find((finding) => finding.id === selectedPdacNodeId) ?? null : null, [assistantFindings, selectedPdacNodeId]);
+  const selectedPdacRelations = useMemo(() => selectedPdacFinding ? pdacRelations.filter((relation) => relation.from === selectedPdacFinding.id || relation.to === selectedPdacFinding.id) : [], [pdacRelations, selectedPdacFinding]);
   function openPdacPage(target: string): void {
     userSelectedPdacPage.current = true;
     const page = (target in pdacPageLabels ? target : "overview") as PdacPage;
@@ -1094,9 +1144,16 @@ function App(): JSX.Element {
                 <article className="panel-card pdac-diagram-card">
                   <div className="card-heading"><div><div className="card-kicker">{latestDiagram || assistantFindings.length > 0 ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"} </div><h2>{assistantFindings.length > 0 ? "Mapa editable de hallazgos" : latestDiagram ? pdacPage === "overview" ? selectedDiagramRevision?.label === "Mapa incremental de hallazgos" ? "Hallazgos que ya forman el mapa" : "Relaciones encontradas" : `Mapa de ${pdacPageLabels[pdacPage].toLowerCase()}` : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
                   {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones del mapa PDAC">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
-                  {pdacPage !== "overview" ? <PdacCanvas key={`${activeProjectId}-${pdacPage}`} projectId={activeProjectId} page={pdacPage} findings={visibleFindings} /> : assistantFindings.length > 0 ? <PdacCanvas key={`${activeProjectId}-overview`} projectId={activeProjectId} page="overview" findings={assistantFindings} /> : latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
+                  {pdacPage !== "overview" ? <PdacCanvas key={`${activeProjectId}-${pdacPage}`} projectId={activeProjectId} page={pdacPage} findings={visibleFindings} onSelectNode={setSelectedPdacNodeId} /> : assistantFindings.length > 0 ? <PdacCanvas key={`${activeProjectId}-overview`} projectId={activeProjectId} page="overview" findings={assistantFindings} onSelectNode={setSelectedPdacNodeId} /> : latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
                   <button className="card-link" onClick={() => reviewCurrentPdacPage()}>{sending ? "Actualizando mapa…" : pdacPage === "overview" ? "Actualizar mapa con OMP" : `Actualizar mapa de ${pdacPageLabels[pdacPage].toLowerCase()}`} <span>→</span></button>
                 </article>
+                {selectedPdacFinding && pdacPage !== "overview" && <article className="panel-card pdac-inspector" aria-label={`Detalle de ${selectedPdacFinding.title}`}>
+                  <div className="card-heading"><div><div className="card-kicker">ELEMENTO SELECCIONADO · PRODUCTSHAPE</div><h2>{selectedPdacFinding.title}</h2></div><button className="pdac-clear-focus" onClick={() => setSelectedPdacNodeId(null)}>Cerrar detalle</button></div>
+                  <div className="pdac-inspector-grid">
+                    <div className="pdac-inspector-copy"><p>{selectedPdacFinding.detail || "No hay una descripción documentada todavía."}</p>{selectedPdacFinding.steps?.length ? <ol>{selectedPdacFinding.steps.map((step) => <li key={step}>{step}</li>)}</ol> : null}<dl className="pdac-nomenclature"><div><dt>Tipo</dt><dd>{pdacArtifactTypeLabels[selectedPdacFinding.pdacType ?? ""] ?? "Artefacto PDAC"}</dd></div><div><dt>ID</dt><dd>{selectedPdacFinding.id}</dd></div><div><dt>Estado</dt><dd>{selectedPdacFinding.status ?? "sin estado"}</dd></div>{selectedPdacFinding.path && <div><dt>Documento</dt><dd>{selectedPdacFinding.path}</dd></div>}{Object.entries(selectedPdacFinding.nomenclature ?? {}).filter(([key]) => !["id", "type", "status"].includes(key)).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl></div>
+                    <div className="pdac-inspector-relations"><div className="card-kicker">RELACIONES PUBLICADAS</div><h3>{selectedPdacRelations.length} relación{selectedPdacRelations.length === 1 ? "" : "es"} con otros elementos</h3><PdacRelationshipGraph selected={selectedPdacFinding} relations={pdacRelations} nodes={assistantFindings} /></div>
+                  </div>
+                </article>}
                 {pdacPage !== "overview" && pdacPage !== "domains" && <article className="panel-card pdac-entity-details" aria-label={`Descripción de ${pdacPageLabels[pdacPage]}`}>
                   <div className="card-heading"><div><div className="card-kicker">DETALLE DE {pdacPageLabels[pdacPage].toUpperCase()} · EVIDENCIA</div><h2>Qué significa cada elemento</h2></div><span className="pdac-entity-count">{visibleFindings.length} elemento{visibleFindings.length === 1 ? "" : "s"}</span></div>
                   {visibleFindings.length > 0 ? <div className="pdac-entity-details-grid">{visibleFindings.map((finding, index) => <article className="pdac-entity-detail" key={finding.id}><div className="pdac-entity-detail-heading"><span className="pdac-detail-index">{String(index + 1).padStart(2, "0")}</span><strong>{finding.title}</strong><span className={`pdac-kind-badge ${finding.kind ?? "fact"}`}>{finding.kind === "inference" ? "INFERENCIA" : finding.kind === "unknown" ? "PENDIENTE" : "HECHO"}</span></div><p>{finding.detail || "Todavía no hay una descripción verificable para este elemento."}</p>{pdacPage === "journeys" && finding.steps?.length ? <ol>{finding.steps.map((step) => <li key={step}>{step}</li>)}</ol> : null}{finding.evidence && <small>{finding.evidence}</small>}</article>)}</div> : <div className="assistant-empty"><strong>Aún no hay elementos de {pdacPageLabels[pdacPage].toLowerCase()}.</strong><small>Actualiza este foco con ProductShape para construir sus descripciones verificables.</small></div>}

@@ -20,7 +20,8 @@ type StudioProject = {
   lastOpenedAt: string;
   detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
-type StudioPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string; steps?: string[] };
+type StudioPdacRelation = { from: string; to: string; kind: string };
+type StudioPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string; steps?: string[]; description?: string; nomenclature?: Record<string, string> };
 type StudioPdacCandidate = { type: "actor" | "use-case" | "domain-term" | "journey" | "business-rule" | "requirement" | "constraint" | "bounded-context"; title: string; detail: string; evidence?: string; confidence?: string; primaryActor?: string; definedIn?: string };
 type StudioProjectRegistry = { version: 1; activeId: string; projects: StudioProject[] };
 
@@ -37,10 +38,10 @@ declare global {
         archive: (id: string) => Promise<StudioProjectRegistry>;
       };
       project: {
-        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: StudioPdacArtifact[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
+        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: StudioPdacArtifact[]; relations?: StudioPdacRelation[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
         saveAnalysis: (value: { report?: string | null; mermaid?: string | null }) => Promise<{ ok: boolean; updatedAt: string }>;
-        productshapeGraph: () => Promise<{ ok: boolean; error?: string; artifacts?: StudioPdacArtifact[]; mermaid?: string | null }>;
-        promotePdac: (candidates: StudioPdacCandidate[]) => Promise<{ ok: boolean; created: number; error?: string; artifacts?: StudioPdacArtifact[]; mermaid?: string | null }>;
+        productshapeGraph: () => Promise<{ ok: boolean; error?: string; artifacts?: StudioPdacArtifact[]; relations?: StudioPdacRelation[]; mermaid?: string | null }>;
+        promotePdac: (candidates: StudioPdacCandidate[]) => Promise<{ ok: boolean; created: number; error?: string; artifacts?: StudioPdacArtifact[]; relations?: StudioPdacRelation[]; mermaid?: string | null }>;
         recoveryPolicy: () => Promise<{ autonomous: boolean }>;
         savePdacEdit: (edit: { nodeId?: string; page: string; title: string }) => Promise<{ nodeId: string; title: string; updatedAt: string }>;
         bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact" | "greenfield"; started: boolean; canResume?: boolean }>;

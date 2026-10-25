@@ -9,7 +9,8 @@ const rendererContracts: Array<[string, RegExp]> = [
   ["canvas uses persisted PDAC node IDs", /nodeIdForFinding\(finding\)/],
   ["PDAC navigation has semantic SVG icons and tooltips", /data-tooltip=\{`\$\{signal\.label\}:[\s\S]{0,120}<span className="pdac-artifact-icon"><PdacIcon id=\{signal\.id\} \/>/],
   ["artifact pages show descriptions below their canvas", /pdacPage !== "overview" && pdacPage !== "domains" && <article className="panel-card pdac-entity-details"/],
-  ["canvas persistence version resets stale mixed pages", /projectstudio-pdac:v5:/],
+  ["selected PDAC element shows nomenclature and relationships", /selectedPdacFinding[\s\S]{0,1200}PdacRelationshipGraph selected=\{selectedPdacFinding\}/],
+  ["PDAC relations hydrate from ProductShape", /setPdacRelations\(analysis\.relations \?\? \[\]\)/],
   ["focus uses ProductShape CLI before OMP", /productshapeGraph\(\)/],
   ["offline tldraw assets defined", /const offlineSvgDataUrl[\s\S]{0,300}const offlineFontDataUrl/],
   ["focus canvas receives only filtered findings", /page=\{pdacPage\} findings=\{visibleFindings\}/],
@@ -21,6 +22,7 @@ const rendererContracts: Array<[string, RegExp]> = [
 const mainContracts: Array<[string, RegExp]> = [
   ["draft promotion writes ProductShape documents", /writeFile\(document\.path, document\.content/],
   ["draft promotion recompiles ProductShape", /const result = await runProductShapeGraph\(\)/],
+  ["ProductShape graph exposes relations and document details", /readArtifactDocumentation\(node\)[\s\S]{0,1200}return \{ report, mermaid, updatedAt, artifacts, relations \}/],
 ];
 const missing = [
   ...rendererContracts.filter(([, pattern]) => !pattern.test(renderer)),

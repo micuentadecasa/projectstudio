@@ -266,6 +266,26 @@ h2 { font-size: 16px; }
 .pdac-entity-detail p, .pdac-entity-detail ol { margin: 7px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .pdac-entity-detail ol { padding-left: 18px; }
 .pdac-entity-detail small { display: block; margin-top: 7px; color: var(--accent); font-size: 8px; line-height: 1.35; }
+.pdac-inspector { min-height: 0; padding: 16px 18px; border-color: #65d5a266; background: linear-gradient(110deg, var(--surface-soft), #65d5a20a); }
+.pdac-inspector-grid { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.4fr); gap: 18px; margin-top: 10px; }
+.pdac-inspector-copy { min-width: 0; }
+.pdac-inspector-copy > p { margin: 0; color: var(--text); font-size: 11px; line-height: 1.5; }
+.pdac-inspector-copy > ol { margin: 10px 0 0; padding-left: 19px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.pdac-nomenclature { display: grid; gap: 5px; margin: 14px 0 0; }
+.pdac-nomenclature > div { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+.pdac-nomenclature dt { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.pdac-nomenclature dd { min-width: 0; margin: 0; color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; overflow-wrap: anywhere; }
+.pdac-inspector-relations { min-width: 0; }
+.pdac-inspector-relations h3 { margin: 4px 0 0; color: var(--text); font-size: 12px; }
+.pdac-relationship-visual { min-height: 170px; margin-top: 8px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.pdac-relationship-svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.pdac-relationship-line { stroke: var(--accent); stroke-width: 1.2; stroke-opacity: .65; }
+.pdac-relationship-kind { fill: var(--accent); font-size: 9px; text-anchor: middle; }
+.pdac-relationship-node, .pdac-relationship-center { fill: var(--surface-strong); stroke: #7783ef99; stroke-width: 1.2; }
+.pdac-relationship-center { fill: var(--accent-soft); stroke: #65d5a2aa; }
+.pdac-relationship-node-title, .pdac-relationship-center-title { fill: var(--text); font-size: 11px; font-weight: 650; }
+.pdac-relationship-node-type, .pdac-relationship-center-type { fill: var(--muted); font-size: 8px; }
+.pdac-relationship-empty { padding: 28px 18px; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .pdac-result-summary { min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px 18px; background: var(--surface-soft); }
 .pdac-result-summary strong, .pdac-result-summary small { display: block; }
 .pdac-result-summary strong { margin-top: 4px; font-size: 12px; }

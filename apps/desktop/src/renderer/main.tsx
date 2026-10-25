@@ -275,7 +275,7 @@ function PdacCanvas({ projectId, page, findings, onSelectNode }: { projectId: st
   const stageRef = useRef<HTMLDivElement | null>(null);
   const editorPageRef = useRef<PdacPage | null>(null);
   const seed = hasFindings
-    ? findings.slice(0, 8)
+    ? page === "overview" ? findings.slice(0, 8) : findings
     : [{ id: `empty-${page}`, title: `Aún no hay hallazgos de ${pdacPageLabels[page].toLowerCase()}`, detail: "El lienzo queda preparado para el siguiente resultado verificable.", kind: "unknown" as const }];
   const nodeIdForFinding = (finding: AssistantFinding): string => /^(finding-|live-|canvas-|empty-)/.test(finding.id) ? `canvas-${page}-${finding.id.replace(/[^a-z0-9_-]/gi, "-")}` : finding.id;
   const findingLabel = (finding: AssistantFinding): string => page === "journeys" && finding.steps?.length

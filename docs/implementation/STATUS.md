@@ -14,9 +14,9 @@ latestVerifiedCommit: ea016ff
 manualVerification: required
 ```
 El flujo F07 valida OMP real, personalidad con temporizador, persistencia de proyecto y lienzos Tldraw no vacíos después de cada actividad OMP. Esta iteración queda preparada para revisión manual; no se hizo push.
-Esta iteración añade una capa determinista inspirada en verification-skill-example: primero se validan manifiesto, grafo persistido y contratos de UI leyendo archivos; no se lanza Electron ni se invoca OMP. El runtime real queda reservado para las comprobaciones que necesitan DOM, IPC, Tldraw o semántica generada por el modelo.
+Esta iteración añade una capa determinista inspirada en verification-skill-example: primero se validan manifiesto, grafo persistido y contratos de UI leyendo archivos. Después se ejecutó un smoke runtime mínimo con Electron y ProductShape CLI en una fixture aislada, sin OMP; el descubrimiento semántico de Notes sigue pendiente.
 El usuario pidió commits directos a `main`, sin push, y continuar sin pausas entre gates.
-Notes quedó deliberadamente sin `.product/` ni `docs/product/` para iniciar el siguiente smoke como Greenfield; la copia reversible está en `/Users/luis/projects/notes-pdac-backup-202603/`.
+Notes quedó deliberadamente sin `.product/` ni `docs/product/` para reiniciar el descubrimiento Brownfield desde el código fuente; la copia reversible está en `/Users/luis/projects/notes-pdac-backup-202603/`.
 La ejecución real pendiente no es sustituible por lectura estática: hay que volver a crear el PDAC con OMP, aprobar focos y comprobar visualmente cada lienzo.
 
 ## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
@@ -33,20 +33,23 @@ La ejecución real pendiente no es sustituible por lectura estática: hay que vo
 | F07-T08 | done | verificación sin app | `.cursor/skills/verify-projectstudio/`, `scripts/verify-pdac-static.ts`, `scripts/verify-pdac-scenarios.ts`; no Electron ni tokens |
 | F07-T09 | done | contrato UI estático | `scripts/verify-ui-contract.ts`; timer, target elegido, botones bloqueados y canvas filtrado |
 | F07-T10 | done | foco de artefacto | Actores y demás pantallas de foco muestran el canvas filtrado; el detalle largo queda sólo en Resumen |
-| F07-T11 | pending-manual | reejecución real | requiere una sesión OMP real para crear de nuevo el PDAC de Notes desde Greenfield; no se lanza por esta iteración |
+| F07-T11 | pending-manual | reejecución real | requiere una sesión OMP real para crear de nuevo el PDAC de Notes desde su código Brownfield; no se lanza por esta iteración |
+| F07-T12 | done | integración ProductShape | foco PDAC intenta `prodshape graph --format json` (0.23.0) antes de llamar a OMP; el grafo vacío cae a recuperación OMP |
 
 ### Evidencia y límite conocido
 
 - El E2E comprueba el lienzo después de cada respuesta OMP: espera `settled`, valida una figura Tldraw visible o activa la vista editable de recuperación, comprueba el foco y captura evidencia antes de continuar.
 - La matriz usa OMP real; no usa mocks ni prompts simulados. Los repositorios temporales se eliminan al finalizar y `repositoriesModified` es `false`.
 - Si Tldraw conserva figuras en su store pero no las pinta en el DOM, la UI no queda en blanco: muestra una vista de recuperación editable y mantiene el guardado de títulos hacia PDAC. Tldraw vuelve a ocultarla cuando su figura DOM aparece.
+- ProductShape CLI está disponible (`0.23.0`) y devuelve rápido un grafo JSON cuando existe modelo; no sustituye la recuperación semántica si `docs/product/` no existe o el grafo está vacío.
+- La pantalla negra observada en runtime se reprodujo como `ReferenceError` por assets offline de tldraw (`offlineSvgDataUrl` y `offlineFontDataUrl`) ausentes; ya están restaurados y el renderer vuelve a pintar. La captura `docs/implementation/evidence/F07-T12-productshape-cli-focus.png` confirma la pantalla de Actores y el canvas con `Actor: Learner`.
 
 ### Checklist manual F07
 
 - [x] Ejecutar `pnpm verify:pdac:scenarios`; matriz determinista 20 escenarios, 10 Greenfield y 10 Brownfield.
-- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-greenfield`; Notes no contiene PDAC persistido.
-- [x] Ejecutar `pnpm verify:ui:static`, `pnpm typecheck`, `pnpm typecheck:desktop`, `pnpm lint` y `git diff --check`.
-- [ ] Con OMP real, iniciar la entrevista Greenfield de Notes; aprobar cada foco y comprobar que cada aprobación escribe el grafo.
+- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield`; Notes tiene código visible pero no PDAC persistido.
+- [x] Ejecutar `pnpm verify:ui:static`, `pnpm typecheck`, `pnpm typecheck:desktop` y `pnpm lint`.
+- [ ] Con OMP real, ejecutar el descubrimiento Brownfield de Notes; aprobar cada foco y comprobar que cada aprobación escribe el grafo.
 - [ ] En Actores, confirmar que se ve sólo el diagrama de actores y que el chat contiene la explicación.
 - [ ] Tras el timer, confirmar el mensaje `Sigo con ...`, target visible y botones deshabilitados durante el trabajo.
 - [ ] Cerrar/reabrir y ejecutar la lectura estática en modo Brownfield para verificar el grafo final.

@@ -15,13 +15,13 @@ La primera capa NO lanza Electron ni consume OMP. Comprueba la fuente PDAC, los 
 3. `pnpm verify:ui:static`: valida los contratos de estado, selección de foco, canvas filtrado, anuncio del timer y bloqueo de botones leyendo el renderer; no lanza Electron.
 4. `pnpm typecheck && pnpm typecheck:desktop && pnpm lint`: verifica contratos TypeScript sin runtime.
 5. Sólo si el cambio toca DOM real, Tldraw, persistencia IPC o OMP: ejecutar el E2E mínimo del feature; no repetir la matriz completa.
-## Prueba de Greenfield
+## Prueba de Notes sin PDAC persistido
 
 ```bash
-PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-greenfield
+PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield
 ```
 
-Resultado válido: no existe `.product/generated/product-graph.json` ni `docs/product/`; el proyecto está listo para la entrevista inicial. No se inventan actores ni casos de uso.
+Resultado válido para Notes: no existe `.product/generated/product-graph.json` ni `docs/product/`, pero el proyecto conserva código visible y por tanto es Brownfield sin modelo PDAC. No se inventan actores ni casos de uso.
 
 ## Prueba de Brownfield
 

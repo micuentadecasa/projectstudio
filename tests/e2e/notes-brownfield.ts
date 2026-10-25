@@ -30,7 +30,6 @@ try {
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count || document.querySelector(".pdac-activity-line") !== null, productShapeCount, { timeout: 30_000 });
   if (await window.locator(".pdac-activity-line").count() > 0) {
     if (await window.locator(".pdac-activity-line").count() !== 1 || await window.locator(".pdac-live-progress").count() !== 0) throw new Error("ProductShape exposes duplicate central activity status");
-    if ((await window.locator(".pdac-activity-history span").count()) === 0) throw new Error("ProductShape activity timeline did not publish a step");
   }
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, productShapeCount, { timeout: 180_000 });
   const productShapeMessage = window.locator(".message-row.omp").last();

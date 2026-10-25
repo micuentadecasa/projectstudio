@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld("studio", {
   },
   project: {
     analysis: () => ipcRenderer.invoke("studio:project:analysis"),
-    saveAnalysis: (analysis) => ipcRenderer.invoke("studio:project:analysis:save", analysis),
+    productshapeGraph: () => ipcRenderer.invoke("studio:project:productshape-graph"),
     savePdacEdit: (edit) => ipcRenderer.invoke("studio:project:pdac-edit", edit),
     bootstrap: (options) => ipcRenderer.invoke("studio:project:bootstrap", options),
   },

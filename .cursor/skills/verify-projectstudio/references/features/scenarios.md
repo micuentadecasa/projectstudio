@@ -13,10 +13,11 @@
 
 ```bash
 pnpm verify:pdac:scenarios
-PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-greenfield
+PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield
 ```
 
 Esta capa valida la matriz y el estado de filesystem sin tokens ni OMP.
+Para un foco con modelo ProductShape, la UI intenta antes `prodshape graph --format json`; si devuelve un grafo vacío, la comprobación semántica vuelve a OMP.
 
 ### Con OMP, sólo cuando el comportamiento lo exige
 

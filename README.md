@@ -96,14 +96,15 @@ La primera capa no abre Electron, no inicia OMP y no consume tokens:
 
 ```bash
 pnpm verify:pdac:scenarios
-PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-greenfield
+PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield
 pnpm verify:ui:static
 pnpm typecheck && pnpm typecheck:desktop && pnpm lint
 ```
 
 `verify:pdac:scenarios` valida la matriz 10 Greenfield + 10 Brownfield. `verify:pdac:static` valida schema, nodos, relaciones, rutas de evidencia y ausencia de texto transitorio (`Objetivo actual`, `Hallazgo publicado`, prompts de revisión). `verify:ui:static` comprueba el contrato del renderer: foco filtrado, anuncio del timer, target elegido, botones deshabilitados y detalle largo sólo en el resumen.
+Al pulsar un foco de artefacto, ProjectStudio intenta primero `prodshape graph --format json` con ProductShape `0.23.0`; sólo si el grafo no existe o está vacío delega la recuperación semántica a OMP. La CLI debe poder invocarse directamente o mediante `pnpm --package=@prodshape/cli@0.23.0 dlx prodshape`.
 
-Notes está deliberadamente vacío de PDAC para reiniciar el journey como Greenfield. La copia reversible está fuera del proyecto:
+Notes está deliberadamente vacío de PDAC, pero conserva código fuente visible; por eso es Brownfield sin modelo ProductShape, no Greenfield. La copia reversible está fuera del proyecto:
 
 ```text
 /Users/luis/projects/notes-pdac-backup-202603/

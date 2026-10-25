@@ -27,6 +27,7 @@ const pdacArtifactTypeLabels: Record<string, string> = {
   behaviour: "Comportamiento",
   "structured-behaviour": "Comportamiento estructurado",
 };
+const offlineSvgDataUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='currentColor' d='M4 4h16v16H4z'/%3E%3C/svg%3E";
 const offlineFontDataUrl = "";
 const offlineTldrawAssetUrls = {
   icons: Object.fromEntries(iconTypes.map((icon) => [icon, offlineSvgDataUrl])),
@@ -737,10 +738,43 @@ function App(): JSX.Element {
     setActiveTab(target);
     if (target === "ProductShape") openPdacPage(page);
   }
+  async function refreshProductShapeFocus(page: Exclude<PdacPage, "overview">): Promise<boolean> {
+    setSending(true);
+    setChatStatus("working");
+    setChatError("");
+    setActivity(`ProductShape está compilando ${pdacPageLabels[page].toLowerCase()}…`);
+    try {
+      const result = await window.studio.project.productshapeGraph();
+      if (!result.ok) return false;
+      await reloadProjectSurface();
+      setActivity(`ProductShape actualizó ${pdacPageLabels[page].toLowerCase()} desde el grafo oficial.`);
+      setChatStatus("settled");
+      setMessages((current) => [...current, { author: "omp", text: `He actualizado ${pdacPageLabels[page].toLowerCase()} desde ProductShape. El diagrama central refleja ahora el grafo publicado.` }]);
+      return true;
+    } catch (error) {
+      setChatError(error instanceof Error ? error.message : String(error));
+      return false;
+    } finally {
+      setSending(false);
+    }
+  }
   function reviewPdacSignal(signal: { id: string; label: string }): void {
     const page = signal.id as Exclude<PdacPage, "overview">;
     focusWorkspace("ProductShape", page);
-    void sendMessage(pdacEntityPrompt(page), "brownfield-discovery");
+    void (async () => {
+      if (await refreshProductShapeFocus(page)) return;
+      await sendMessage(pdacEntityPrompt(page), "brownfield-discovery");
+    })();
+  }
+  function reviewCurrentPdacPage(): void {
+    if (pdacPage === "overview") {
+      void sendMessage(reviewPrompt("ProductShape"), "brownfield-discovery");
+      return;
+    }
+    void (async () => {
+      if (await refreshProductShapeFocus(pdacPage)) return;
+      await sendMessage(pdacEntityPrompt(pdacPage), "brownfield-discovery");
+    })();
   }
   function reviewNextPdacSignal(): void {
     if (nextPdacSignal && nextPdacSignal.id !== "purpose") reviewPdacSignal(nextPdacSignal);
@@ -986,12 +1020,12 @@ function App(): JSX.Element {
               <section className={`pdac-workbench pdac-artifact-screen ${pdacPage === "overview" ? "overview-screen" : `${pdacPage}-screen`}`}>
                 <nav className="pdac-artifact-nav" aria-label="Secciones PDAC"><div className="pdac-artifact-links">{pdacSignals.map((signal) => <button className={`pdac-artifact-button ${signal.state} ${pdacPage === signal.id ? "selected" : ""}`} key={signal.id} onClick={() => { userSelectedPdacPage.current = true; openPdacPage(signal.id); }} aria-label={signal.label} aria-pressed={pdacPage === signal.id} title={`${signal.label} · ${signal.count} hallazgo${signal.count === 1 ? "" : "s"}`}><span className="pdac-artifact-icon">{signal.id === "purpose" ? "◎" : signal.id === "actors" ? "♙" : signal.id === "use-cases" ? "◇" : signal.id === "domains" ? "◈" : signal.id === "journeys" ? "↝" : signal.id === "rules" ? "§" : signal.id === "requirements" ? "✓" : "◌"}</span><span className="pdac-artifact-count">{signal.count}</span><span className="pdac-artifact-label">{signal.label}</span></button>)}</div><span className={`pdac-surface-mode ${sending ? "live" : "stored"}`}>{sending ? "EN VIVO" : analysisStale ? "CAMBIOS" : "GUARDADO"}</span><button className="outline-button primary-review compact-review" onClick={() => void sendMessage(projectMode === "greenfield" ? "Quiero empezar la entrevista del primer caso de uso." : reviewPrompt("ProductShape"), "brownfield-discovery")}>{projectMode === "greenfield" ? "Empezar" : "Revisar"}</button></nav>
                 {sending && <div className="pdac-activity-line" aria-live="polite"><span className="activity-spinner" aria-label="OMP trabajando" /><strong>{progressSteps.at(-1)?.title ?? "Preparando la inspección"}</strong><small>{progressSteps.at(-1)?.detail ?? "El workflow está comenzando."}</small></div>}
-                {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">{sending ? "VISTA DINÁMICA · TRABAJO ACTUAL" : "VISTA ESTÁTICA · EVIDENCIA PDAC"}</div><h2>{pdacPageLabels[pdacPage]}</h2><p>{sending ? `Estoy trabajando sólo el foco ${pdacPageLabels[pdacPage].toLowerCase()}. El mapa y los hallazgos se actualizarán aquí sin mezclar otras áreas.` : `Esta es la evidencia guardada para ${pdacPageLabels[pdacPage].toLowerCase()}. Puedes volver al estado general cuando quieras.`}</p><div className="pdac-entity-count">{visibleFindings.length} hallazgo{visibleFindings.length === 1 ? "" : "s"} visible{sending ? " · actualizando" : ""}</div></div><div className="pdac-entity-actions"><button className="outline-button primary-review" onClick={() => void sendMessage(pdacEntityPrompt(pdacPage))}>{sending ? "Analizando…" : `Actualizar ${pdacPageLabels[pdacPage].toLowerCase()}`}</button><button className="outline-button" onClick={() => openPdacPage("overview")}>← Estado general</button></div></article>}
+                {pdacPage !== "overview" && <article className="panel-card pdac-entity-banner"><div><div className="card-kicker">{sending ? "VISTA DINÁMICA · TRABAJO ACTUAL" : "VISTA ESTÁTICA · EVIDENCIA PDAC"}</div><h2>{pdacPageLabels[pdacPage]}</h2><p>{sending ? `Estoy trabajando sólo el foco ${pdacPageLabels[pdacPage].toLowerCase()}. El mapa y los hallazgos se actualizarán aquí sin mezclar otras áreas.` : `Esta es la evidencia guardada para ${pdacPageLabels[pdacPage].toLowerCase()}. Puedes volver al estado general cuando quieras.`}</p><div className="pdac-entity-count">{visibleFindings.length} hallazgo{visibleFindings.length === 1 ? "" : "s"} visible{sending ? " · actualizando" : ""}</div></div><div className="pdac-entity-actions"><button className="outline-button primary-review" onClick={() => reviewCurrentPdacPage()}>{sending ? "Analizando…" : `Actualizar ${pdacPageLabels[pdacPage].toLowerCase()}`}</button><button className="outline-button" onClick={() => openPdacPage("overview")}>← Estado general</button></div></article>}
                 <article className="panel-card pdac-diagram-card">
                   <div className="card-heading"><div><div className="card-kicker">{latestDiagram || assistantFindings.length > 0 ? (selectedDiagramRevision?.status === "provisional" ? "MAPA PDAC · PROVISIONAL" : "MAPA PDAC · EVIDENCIA") : "MAPA PDAC · ESPERANDO EVIDENCIA"} </div><h2>{assistantFindings.length > 0 ? "Mapa editable de hallazgos" : latestDiagram ? pdacPage === "overview" ? selectedDiagramRevision?.label === "Mapa incremental de hallazgos" ? "Hallazgos que ya forman el mapa" : "Relaciones encontradas" : `Mapa de ${pdacPageLabels[pdacPage].toLowerCase()}` : "El mapa aparecerá aquí"}</h2></div><span className="live-badge"><span className={sending ? "active" : ""} />{sending ? "ACTUALIZANDO" : "LIVE"}</span></div>
                   {diagramRevisions.length > 1 && <div className="diagram-revisions" aria-label="Revisiones del mapa PDAC">{diagramRevisions.map((revision, index) => <button className={revision.id === selectedDiagramRevisionId ? "selected" : ""} key={revision.id} onClick={() => setSelectedDiagramRevisionId(revision.id)}>{revision.status === "provisional" ? "Provisional" : "Guardado"} {index + 1}</button>)}</div>}
                   {pdacPage !== "overview" ? <PdacCanvas key={`${activeProjectId}-${pdacPage}`} projectId={activeProjectId} page={pdacPage} findings={visibleFindings} /> : assistantFindings.length > 0 ? <PdacCanvas key={`${activeProjectId}-overview`} projectId={activeProjectId} page="overview" findings={assistantFindings} /> : latestDiagram ? <div className="system-map generated-system-map"><DiagramVisual source={latestDiagram} canvas /></div> : <div className="system-map diagram-placeholder"><span className="placeholder-icon">{sending ? "◌" : "◇"}</span><strong>{sending ? "Construyendo relaciones…" : "Todavía no hay un diagrama publicado"}</strong><small>{sending ? "El mapa se actualizará cuando el asistente encuentre relaciones confirmables." : "Revisar y diagramar inicia el análisis con evidencia real."}</small></div>}
-                  <button className="card-link" onClick={() => void sendMessage(pdacPage === "overview" ? reviewPrompt("ProductShape") : pdacEntityPrompt(pdacPage))}>{sending ? "Actualizando mapa…" : pdacPage === "overview" ? "Actualizar mapa con OMP" : `Actualizar mapa de ${pdacPageLabels[pdacPage].toLowerCase()}`} <span>→</span></button>
+                  <button className="card-link" onClick={() => reviewCurrentPdacPage()}>{sending ? "Actualizando mapa…" : pdacPage === "overview" ? "Actualizar mapa con OMP" : `Actualizar mapa de ${pdacPageLabels[pdacPage].toLowerCase()}`} <span>→</span></button>
                 </article>
                 {pdacPage === "domains" && <article className="panel-card pdac-domain-glossary"><div className="card-heading"><div><div className="card-kicker">GLOSARIO DEL DOMINIO · EVIDENCIA</div><h2>Términos y significado</h2></div><span className="pdac-entity-count">{domainTerms.length} término{domainTerms.length === 1 ? "" : "s"}</span></div><div className="pdac-glossary-grid">{domainTerms.length > 0 ? domainTerms.map((term) => <div className="pdac-glossary-term" key={term.id}><strong>{term.title}</strong><p>{term.detail}</p>{term.evidence && <small>{term.evidence}</small>}</div>) : <div className="assistant-empty"><strong>Aún no hay términos confirmados.</strong><small>Actualiza el foco Dominio con OMP para construir este glosario.</small></div>}</div></article>}
                 {pdacPage === "overview" && <article className="panel-card pdac-details-card">

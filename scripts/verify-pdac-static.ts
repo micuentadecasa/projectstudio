@@ -1,10 +1,12 @@
-import { access, readFile, stat } from "node:fs/promises";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const projectRoot = resolve(process.env.PROJECTSTUDIO_PROJECT_ROOT ?? "/Users/luis/projects/notes");
 const expectedMode = process.argv.includes("--expect-greenfield") ? "greenfield" : process.argv.includes("--expect-brownfield") ? "brownfield" : "auto";
 const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
 const productRoot = join(projectRoot, "docs", "product");
+const visibleEntries = (await readdir(projectRoot).catch(() => [])).filter((entry) => !entry.startsWith(".") && entry !== "node_modules");
+const projectMode = visibleEntries.length === 0 ? "greenfield" : "brownfield";
 const transientTitle = /objetivo actual|hallazgo publicado|revisi[oó]n proactiva|pdac completo|no inventes datos|foco actores|foco casos de uso|foco dominio/i;
 const requiredTypes = ["actor", "use-case", "journey", "domain-term", "business-rule", "bounded-context"];
 const requirementTypes = ["requirement", "functional-requirement", "quality-requirement"];
@@ -23,9 +25,9 @@ function fail(message: string): never {
 
 if (!(await exists(graphPath))) {
   const hasProductDocs = await exists(productRoot);
-  if (expectedMode === "brownfield") fail(`Se esperaba un grafo brownfield y no existe: ${graphPath}`);
+  if (expectedMode !== "auto" && expectedMode !== projectMode) fail(`Modo esperado ${expectedMode}, modo detectado ${projectMode}: el proyecto tiene ${visibleEntries.length} entradas visibles.`);
   if (hasProductDocs) fail(`Hay docs/product pero falta .product/generated/product-graph.json: ${productRoot}`);
-  console.log(JSON.stringify({ ok: true, mode: "greenfield", projectRoot, graph: null, message: "No hay PDAC persistido; el proyecto está listo para la entrevista inicial." }, null, 2));
+  console.log(JSON.stringify({ ok: true, mode: projectMode, projectRoot, graph: null, message: "No hay PDAC persistido; el proyecto está listo para la siguiente fase de recuperación o entrevista." }, null, 2));
   process.exit(0);
 }
 if (expectedMode === "greenfield") fail(`Se esperaba Greenfield pero existe el grafo: ${graphPath}`);
@@ -57,7 +59,7 @@ if (!requirementTypes.some((type) => counts.has(type))) fail("Falta cobertura PD
 const productStat = await stat(productRoot).catch(() => undefined);
 console.log(JSON.stringify({
   ok: true,
-  mode: "brownfield",
+  mode: projectMode,
   projectRoot,
   graphPath,
   productRootExists: Boolean(productStat),

@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
+import { readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -320,6 +320,27 @@ async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
     return null;
   }
 }
+type ProductShapeGraphResult = { ok: boolean; output: string; error?: string };
+
+function runProductShapeGraph(): Promise<ProductShapeGraphResult> {
+  const configuredBinary = process.env.PRODUCTSHAPE_BIN;
+  const binary = configuredBinary ?? "pnpm";
+  const args = configuredBinary
+    ? ["graph", "--format", "json"]
+    : ["--package=@prodshape/cli@0.23.0", "dlx", "prodshape", "graph", "--format", "json"];
+  return new Promise((resolveResult) => {
+    const child = spawn(binary, args, { cwd: projectRoot, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    let errorOutput = "";
+    child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString(); });
+    child.stderr.on("data", (chunk: Buffer) => { errorOutput += chunk.toString(); });
+    child.once("error", (error) => resolveResult({ ok: false, output, error: error.message }));
+    child.once("close", (code) => {
+      const combined = `${output}\n${errorOutput}`.trim();
+      resolveResult(code === 0 ? { ok: true, output: combined } : { ok: false, output: combined, error: `ProductShape terminó con código ${code ?? "desconocido"}` });
+    });
+  });
+}
 type PdacCanvasEdit = { nodeId?: string; page?: string; title?: string };
 let pdacEditQueue = Promise.resolve();
 async function writePdacCanvasEdit(input: PdacCanvasEdit): Promise<{ nodeId: string; title: string; updatedAt: string }> {
@@ -507,6 +528,16 @@ function installChatIpc(): void {
     return archiveProject(id);
   });
   ipcMain.handle("studio:project:analysis", () => loadStoredAnalysis());
+  ipcMain.handle("studio:project:productshape-graph", async () => {
+    const result = await runProductShapeGraph();
+    if (!result.ok) return { ok: false, error: result.error ?? "ProductShape no pudo compilar el grafo." };
+    const truth = await readProjectPdacTruth();
+    if (!truth) {
+      await rm(join(projectRoot, ".product", "generated"), { recursive: true, force: true });
+      return { ok: false, error: "ProductShape devolvió un grafo vacío; se necesita una revisión de OMP para recuperar evidencia." };
+    }
+    return { ok: true, artifacts: truth.artifacts, mermaid: truth.mermaid };
+  });
   ipcMain.handle("studio:project:analysis:save", async (_event, value: unknown) => {
     if (typeof value !== "object" || value === null) throw new Error("analysis must be an object");
     const input = value as { report?: unknown; mermaid?: unknown };

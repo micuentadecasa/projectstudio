@@ -38,6 +38,7 @@ declare global {
       };
       project: {
         analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; artifacts?: StudioPdacArtifact[]; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
+        saveAnalysis: (value: { report?: string | null; mermaid?: string | null }) => Promise<{ ok: boolean; updatedAt: string }>;
         productshapeGraph: () => Promise<{ ok: boolean; error?: string; artifacts?: StudioPdacArtifact[]; mermaid?: string | null }>;
         promotePdac: (candidates: StudioPdacCandidate[]) => Promise<{ ok: boolean; created: number; error?: string; artifacts?: StudioPdacArtifact[]; mermaid?: string | null }>;
         recoveryPolicy: () => Promise<{ autonomous: boolean }>;

@@ -9,13 +9,13 @@ branch: main
 gate: F07-REAL-OMP-PDAC-CANVAS
 userDecision: APPROVED
 nextPhase: '07'
-latestVerifiedCommit: ac3947f
+latestVerifiedCommit: 33d5483
 manualVerification: required
 ```
 F07 implementa timer de personalidad, modo autónomo exclusivo de pruebas, persistencia ProductShape como verdad del proyecto, promoción estructurada OMP → drafts PDAC → CLI ProductShape, lienzos Tldraw offline y verificación DOM/estática. No se hizo push.
 La recuperación autónoma resuelve ambigüedades sólo cuando `PROJECTSTUDIO_AUTONOMOUS_RECOVERY=1`; el modo normal conserva la decisión para el usuario.
-Notes tiene actualmente un grafo canónico recuperado de la evidencia OMP real: 46 nodos `draft`, 24 relaciones y los ocho tipos PDAC. La copia del estado vacío anterior está en `/Users/luis/projects/notes-pdac-backup-202603/`.
-La prueba que inicia Notes completamente vacío y espera que el renderer reciba texto OMP sigue fallando con `candidates=0` y `textLength=0`; no se marca como pass. La promoción desde una respuesta OMP real capturada sí pasa por el bridge Electron y el CLI ProductShape, y queda documentada en `F07-T14-notes-canonical-pdac.md`.
+Notes tiene actualmente un grafo canónico recuperado de la evidencia OMP real: 47 nodos, 31 relaciones y ocho tipos PDAC (`actor=3`, `use-case=7`, `domain-term=14`, `journey=3`, `business-rule=6`, `constraint=5`, `functional-requirement=4`, `bounded-context=5`). Se eliminaron del grafo los nodos `canvas.md` transitorios y el texto de proceso.
+La prueba que inicia Notes completamente vacío y espera que el renderer reciba texto OMP ya pasa con OMP real: el worker normaliza los `text_delta`, publica un `message_end` siempre al cerrar la sesión y el preload expone el guardado de análisis que el renderer necesita. La promoción autónoma persiste el grafo canónico; el E2E pasó con candidatos y texto observables.
 
 ## Fase 07 — personalidad, persistencia y comprobación visual del lienzo
 
@@ -31,12 +31,12 @@ La prueba que inicia Notes completamente vacío y espera que el renderer reciba 
 | F07-T08 | done | verificación sin app | `.cursor/skills/verify-projectstudio/`, `scripts/verify-pdac-static.ts`, `scripts/verify-pdac-scenarios.ts`; no Electron ni tokens |
 | F07-T09 | done | contrato UI estático | `scripts/verify-ui-contract.ts`; timer, target elegido, botones bloqueados y canvas filtrado |
 | F07-T10 | done | foco de artefacto | Actores y demás pantallas de foco muestran el canvas filtrado; el detalle largo queda sólo en Resumen |
-| F07-T11 | blocked-known | E2E OMP desde Notes vacío | `tests/e2e/notes-brownfield.ts` sigue observando `candidates=0`, `textLength=0`; no se oculta el bloqueo |
+| F07-T11 | done | E2E OMP desde Notes vacío | `tests/e2e/notes-brownfield.ts`; OMP real entrega 6.000+ deltas, el renderer observa texto/candidatos y ProductShape persiste el grafo |
 | F07-T12 | done | integración ProductShape | foco PDAC intenta `prodshape graph --format json` (0.23.0) antes de llamar a OMP; el grafo vacío cae a recuperación OMP |
 | F07-T13 | done | promoción determinista | `tests/e2e/pdac-promotion.ts`; bridge real + ProductShape CLI, 5 nodos, 4 tipos y captura `F07-T13-pdac-promotion.png` |
-| F07-T14 | done | Notes canónico y persistencia | `F07-T14-notes-canonical-pdac.md`; 46 nodos, 24 relaciones, 8 tipos; reapertura y DOM en `test:e2e:notes:diagram` |
+| F07-T14 | done | Notes canónico y persistencia | `F07-T14-notes-canonical-pdac.md`; 47 nodos, 31 relaciones, 8 tipos; reapertura y DOM en `test:e2e:notes:diagram` |
 | F07-T15 | done | extracción aislada | `tests/pdac-recovery.test.ts`; 2 tests de JSON PDAC y fallback de viñetas, sin Electron, ProductShape ni tokens |
-
+| F07-T16 | done | frontera OMP → renderer | `packages/orchestrator/src/omp-frame-text.ts`, `agent-worker.ts`, preload `saveAnalysis`; el cierre visible ya no depende de un frame final opcional |
 ### Evidencia y límite conocido
 
 - La matriz usa OMP real; no usa mocks ni prompts simulados. Los repositorios temporales se eliminan al finalizar y `repositoriesModified` es `false`.
@@ -48,12 +48,12 @@ La prueba que inicia Notes completamente vacío y espera que el renderer reciba 
 ### Checklist manual F07
 
 - [x] Ejecutar `pnpm verify:pdac:scenarios`; matriz determinista 20 escenarios, 10 Greenfield y 10 Brownfield.
-- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield`; Notes tiene 46 nodos canónicos, 24 relaciones y ocho tipos.
+- [x] Ejecutar `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm verify:pdac:static -- --expect-brownfield`; Notes tiene 47 nodos canónicos, 31 relaciones, ocho tipos y cero nodos canvas-only.
 - [x] Ejecutar `pnpm verify:ui:static`, `pnpm typecheck`, `pnpm typecheck:desktop` y `pnpm lint`.
 - [x] Ejecutar `pnpm vitest run tests/pdac-recovery.test.ts`; extracción aislada: 2 tests, sin Electron ni tokens.
 - [x] Ejecutar `pnpm test:e2e:pdac:promotion`; promoción Electron/ProductShape sin OMP, 5 nodos y reapertura.
-- [x] Ejecutar `pnpm test:e2e:notes:diagram`; reapertura Notes, contadores 7/9/8/2/5/8/7, lienzos Actores/Dominio y tokens `false`.
-- [ ] Reprobar `tests/e2e/notes-brownfield.ts` desde Notes vacío cuando se corrija la entrega de texto OMP al renderer; el bloqueo actual queda documentado, no maquillado.
+- [x] Ejecutar `pnpm test:e2e:notes:diagram`; reapertura Notes, contadores 3/7/14/3/5, lienzos Actores/Dominio y tokens `false`.
+- [x] Ejecutar `pnpm exec tsx tests/e2e/notes-brownfield.ts` desde Notes vacío; OMP real, candidatos y `docs/product/model/` persistidos, y arquitectura posterior completada.
 - [ ] En una sesión manual con `PROJECTSTUDIO_AUTONOMOUS_RECOVERY` omitido, confirmar que el timer pausa y solicita decisión humana ante ambigüedad.
 
 ## Fase 04 — chat OMP visible
@@ -91,17 +91,17 @@ El producto requiere que el usuario tenga OMP instalado, autenticado y con model
 | `pnpm build:all` | pass | renderer, main Electron y worker compilados |
 | `pnpm typecheck && pnpm typecheck:desktop` | pass | contratos TypeScript |
 | `pnpm lint` | pass | ESLint sin errores |
-| `pnpm test` | pass | 9 archivos; 19 tests, incluyendo RPC y adapter OMP reales |
+| `pnpm test` | pass | 10 archivos; 21 tests, incluyendo RPC y adapter OMP reales |
 | `pnpm test:e2e:pdac:promotion` | pass | 5 nodos, 4 tipos, bridge real y ProductShape CLI |
-| `pnpm test:e2e:notes:diagram` | pass | 46 nodos canónicos, contadores tipados, lienzos y reapertura; `tokensUsed: false` |
-| `pnpm verify:pdac:static -- --expect-brownfield` | pass | Notes: 46 nodos, 24 relaciones, ocho tipos y cero canvas-only |
+| `pnpm test:e2e:notes:diagram` | pass | 47 nodos canónicos, contadores 3/7/14/3/5, lienzos y reapertura; `tokensUsed: false` |
+| `pnpm verify:pdac:static -- --expect-brownfield` | pass | Notes: 47 nodos, 31 relaciones, ocho tipos y cero canvas-only |
 | `pnpm verify:ui:static` | pass | 12 contratos; no lanza Electron |
 | `pnpm vitest run tests/pdac-recovery.test.ts` | pass | 2 tests deterministas; JSON PDAC y fallback de viñetas sin Electron, ProductShape ni tokens |
 | `pnpm verify:pdac:scenarios` | pass | 20 escenarios deterministas |
 | `pnpm test:f04` | pass histórico | Electron real, respuesta final visible y sin prompt interno |
 | `pnpm spike:omp-adapter --real` | pass histórico | OMP real: ready, streaming y settled |
 | `pnpm spike:omp --real` | pass histórico | RPC real y negociación v2 |
-| `pnpm exec tsx tests/e2e/notes-brownfield.ts` desde Notes vacío | blocked-known | OMP real no entregó texto observable al renderer: `candidates=0`, `textLength=0`; evidencia no marcada como pass |
+| `pnpm exec tsx tests/e2e/notes-brownfield.ts` desde Notes vacío | pass | OMP real entrega deltas al renderer, `data-pdac-text-length` y candidatos no cero; ProductShape recompila el grafo canónico y la arquitectura posterior produce evidencia |
 
 ## Evidencia visual
 
@@ -194,8 +194,8 @@ Verificación visual del artefacto persistido, sin enviar prompt ni consumir tok
 pnpm test:e2e:notes:diagram
 ```
 
-El smoke test abre Notes, lee `.product/generated/product-graph.json`, exige 46 nodos canónicos y guarda `F05-T06-notes-stored-diagram.png` y `.md`.
-El mismo smoke navega a las páginas `Casos de uso`, `Actores` y `Dominio`, comprueba los lienzos Tldraw y verifica los contadores 7/9/8/2/5/8/7 sin consumir tokens.
+El smoke test abre Notes, lee `.product/generated/product-graph.json`, exige 47 nodos canónicos y guarda `F05-T06-notes-stored-diagram.png` y `.md`.
+El mismo smoke navega a las páginas `Casos de uso`, `Actores` y `Dominio`, comprueba los lienzos Tldraw y verifica los contadores 3/7/14/3/5 sin consumir tokens.
 
 
 Journey humano completo, sin mostrar prompts internos:
@@ -213,7 +213,7 @@ El recorrido asistido de ProductShape también se comprobó con el grafo canóni
 pnpm test:e2e:notes:diagram
 ```
 
-Resultado observado: el DOM muestra los contadores 7/9/8/2/5/8/7, el glosario de Dominio, el canvas de Actores y el mapa guardado. No consumió tokens.
+Resultado observado: el DOM muestra los contadores 3/7/14/3/5, el glosario de Dominio, el canvas de Actores y el mapa guardado. No consumió tokens.
 
 ADR asociado: `docs/adr/ADR-025-productshape-assistant-revisions.md`.
 

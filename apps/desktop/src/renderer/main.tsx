@@ -409,8 +409,10 @@ function AssistantContent({ text }: { text: string }): JSX.Element {
   const after = match ? text.slice((match.index ?? 0) + match[0].length) : "";
   return <><div className="assistant-readable">{formatAssistantText(`${before}\n${after}`)}</div><div className="chat-diagram-link">Diagrama actualizado en el panel central · abre el mapa PDAC para verlo completo.</div></>;
 }
-function stringField(value: Record<string, unknown>, key: string): string | undefined {
-  return typeof value[key] === "string" ? value[key] as string : undefined;
+function stringField(value: unknown, key: string): string | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const field = (value as Record<string, unknown>)[key];
+  return typeof field === "string" ? field : undefined;
 }
 function displayChatStatus(status: string): string {
   if (status === "starting" || status === "submitting") return "iniciando";
@@ -628,6 +630,28 @@ function App(): JSX.Element {
   }
 
   useEffect(() => {
+    const commitAssistantText = (text: string, candidateText: string): void => {
+      setMessages((current) => [...current, { author: "omp", text }]);
+      const source = extractMermaid(text);
+      const finalFindings = extractAssistantFindings(text, true, 64);
+      if (finalFindings.length > 0) {
+        setAssistantFindings((current) => {
+          const incomingIds = new Set(finalFindings.map((finding) => finding.id));
+          return [...finalFindings, ...current.filter((finding) => !incomingIds.has(finding.id))].slice(0, 64);
+        });
+      }
+      const diagram = source ?? (finalFindings.length > 0 ? buildEvidencePreviewMermaid(finalFindings) : null);
+      setAnalysisReport((current) => current ? `${current}\n\n---\n\n${text}` : text);
+      void window.studio.project.saveAnalysis({ report: text, mermaid: diagram });
+      setAnalysisStale(false);
+      if (diagram) publishStreamingDiagram(diagram, source ? "Mapa recibido de OMP" : "Mapa incremental de hallazgos");
+      const candidates = autonomousRecoveryRef.current ? extractPdacCandidates(candidateText, pdacPageRef.current, finalFindings) : [];
+      setAutonomousCandidateCount(candidates.length);
+      setAutonomousTextLength(candidateText.length);
+      if (candidates.length > 0) void promoteAutonomousCandidates(candidates);
+      addProgressStep({ title: "Resultado recibido", detail: candidates.length > 0 ? "OMP terminó; ProductShape está convirtiendo los hallazgos en drafts." : "El centro y el mapa ya tienen la respuesta completa de OMP.", status: "done" });
+      if (candidates.length === 0) setActivity("Hallazgos preparados");
+    };
     const unsubscribe = window.studio.chat.onEvent((event) => {
       if (event.type === "status") {
         setChatStatus(event.status);
@@ -677,33 +701,18 @@ function App(): JSX.Element {
         const candidateText = `${streamedText}\n${frameText ?? ""}`;
         streamingDraft.current = "";
         setStreamingText("");
-        if (text) {
-          setMessages((current) => [...current, { author: "omp", text }]);
-          const source = extractMermaid(text);
-          const finalFindings = extractAssistantFindings(text, true, 64);
-          if (finalFindings.length > 0) {
-            setAssistantFindings((current) => {
-              const incomingIds = new Set(finalFindings.map((finding) => finding.id));
-              return [...finalFindings, ...current.filter((finding) => !incomingIds.has(finding.id))].slice(0, 64);
-            });
-          }
-          const diagram = source ?? (finalFindings.length > 0 ? buildEvidencePreviewMermaid(finalFindings) : null);
-          setAnalysisReport((current) => current ? `${current}\n\n---\n\n${text}` : text);
-          void window.studio.project.saveAnalysis({ report: text, mermaid: diagram });
-          setAnalysisStale(false);
-          if (diagram) publishStreamingDiagram(diagram, source ? "Mapa recibido de OMP" : "Mapa incremental de hallazgos");
-          const candidates = autonomousRecoveryRef.current ? extractPdacCandidates(candidateText, pdacPageRef.current, finalFindings) : [];
-          setAutonomousCandidateCount(candidates.length);
-          setAutonomousTextLength(candidateText.length);
-          if (candidates.length > 0) void promoteAutonomousCandidates(candidates);
-          addProgressStep({ title: "Resultado recibido", detail: candidates.length > 0 ? "OMP terminó; ProductShape está convirtiendo los hallazgos en drafts." : "El centro y el mapa ya tienen la respuesta completa de OMP.", status: "done" });
-          if (candidates.length === 0) setActivity("Hallazgos preparados");
-        }
+        if (text) commitAssistantText(text, candidateText);
       } else if (event.type === "session_settled") {
+        setActiveProactiveTarget(null);
+        const pendingText = streamingDraft.current;
+        if (pendingText) {
+          streamingDraft.current = "";
+          setStreamingText("");
+          commitAssistantText(pendingText, pendingText);
+        }
         setChatStatus("settled");
         if (!canonicalizingRef.current) {
           setPersonalityStatus("waiting");
-          setActiveProactiveTarget(null);
           setActivity("Listo para continuar");
           setSending(false);
         } else {

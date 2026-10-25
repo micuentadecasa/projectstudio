@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { OmpAdapter, type OmpAdapterEvent } from "../../omp-bridge/src/omp-adapter.js";
 import { StudioAgentRuntime, type AgentCommand, type AgentRunContext } from "./agent-runtime.js";
+import { textDeltaFromFrame, textFromFrame } from "./omp-frame-text.js";
 
 type StartRequest = { type: "start"; id: string; command: AgentCommand; context: AgentRunContext };
 type ChatStartRequest = { type: "chat_start"; id: string };
@@ -19,17 +20,6 @@ mkdirSync(sessionDirectory, { recursive: true });
 let adapter: OmpAdapter | undefined;
 let adapterStart: Promise<void> | undefined;
 let responseText = "";
-function textFromFrame(frame: Record<string, unknown>): string | undefined {
-  if (typeof frame.text === "string") return frame.text;
-  if (typeof frame.delta === "string") return frame.delta;
-  const nested = frame.assistantMessageEvent;
-  if (typeof nested === "object" && nested !== null) {
-    const nestedFrame = nested as Record<string, unknown>;
-    if (typeof nestedFrame.delta === "string" && (nestedFrame.type === undefined || nestedFrame.type === "text_delta")) return nestedFrame.delta;
-    if (typeof nestedFrame.text === "string") return nestedFrame.text;
-  }
-  return undefined;
-}
 
 function getAdapter(): OmpAdapter {
   if (adapter) return adapter;
@@ -47,9 +37,11 @@ function getAdapter(): OmpAdapter {
   });
   adapter.on("event", (event: OmpAdapterEvent) => {
     if (event.type === "message_update") {
-      const delta = textFromFrame(event.frame);
-      if (delta) responseText += delta;
-      send({ type: "event", event: { type: "message_update", frame: {} } });
+      const delta = textDeltaFromFrame(event.frame);
+      if (delta) {
+        responseText += delta;
+        send({ type: "event", event: { type: "message_update", frame: { assistantMessageEvent: { type: "text_delta", delta } } } });
+      }
       return;
     }
     if (event.type === "message_end") {
@@ -63,12 +55,13 @@ function getAdapter(): OmpAdapter {
       return;
     }
     if (event.type === "session_settled") {
-      if (responseText) send({ type: "event", event: { type: "message_end", frame: { text: responseText } } });
+      send({ type: "event", event: { type: "message_end", frame: { text: responseText } } });
       responseText = "";
       send({ type: "event", event: { type: "session_settled" } });
       return;
     }
     if (event.type === "status" || event.type === "ready" || event.type === "warning" || event.type === "error") {
+      if (event.type === "status" && event.status === "settled") return;
       send({ type: "event", event });
     }
   });

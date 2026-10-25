@@ -23,11 +23,11 @@ try {
   await window.locator(".pdac-artifact-nav").waitFor();
   const graph = JSON.parse(await readFile(resolve(notesRoot, ".product/generated/product-graph.json"), "utf8")) as { nodes?: Array<{ type?: string; title?: string; path?: string }> };
   const canonicalNodes = graph.nodes?.filter((node) => node.path?.startsWith("docs/product/model/") && !node.path.endsWith("/canvas.md")) ?? [];
-  if (canonicalNodes.length !== 46) throw new Error(`Notes no hidrata el grafo canónico esperado: ${canonicalNodes.length} nodos`);
+  if (canonicalNodes.length !== 47) throw new Error(`Notes no hidrata el grafo canónico esperado: ${canonicalNodes.length} nodos`);
   const counts = Object.fromEntries(["actor", "use-case", "domain-term", "journey", "business-rule", "constraint", "functional-requirement", "bounded-context"].map((type) => [type, canonicalNodes.filter((node) => node.type === type).length]));
-  const expectedCounts = { actor: 7, "use-case": 9, "domain-term": 8, journey: 2, "business-rule": 5, constraint: 5, "functional-requirement": 3, "bounded-context": 7 };
+  const expectedCounts = { actor: 3, "use-case": 7, "domain-term": 14, journey: 3, "business-rule": 6, constraint: 5, "functional-requirement": 4, "bounded-context": 5 };
   if (JSON.stringify(counts) !== JSON.stringify(expectedCounts)) throw new Error(`Conteos PDAC inesperados: ${JSON.stringify(counts)}`);
-  const expectedArtifactCounts: Record<string, number> = { Actores: 7, "Casos de uso": 9, Dominio: 8, Journeys: 2, "Bounded contexts": 7 };
+  const expectedArtifactCounts: Record<string, number> = { Actores: 3, "Casos de uso": 7, Dominio: 14, Journeys: 3, "Bounded contexts": 5 };
   for (const [label, count] of Object.entries(expectedArtifactCounts)) {
     const button = window.getByRole("button", { name: label, exact: true });
     const title = await button.getAttribute("title");

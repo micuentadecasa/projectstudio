@@ -156,6 +156,13 @@ async function readProjectRegistry(): Promise<ProjectRegistry> {
   try {
     const value = JSON.parse(await readFile(projectRegistryPath(), "utf8")) as ProjectRegistry;
     if (value.version === 1 && Array.isArray(value.projects)) {
+      if (!process.env.PROJECTSTUDIO_PROJECT_ROOT) {
+        const persisted = value.projects.find((project) => project.id === value.activeId && !project.archived);
+        if (persisted) {
+          projectRoot = resolve(persisted.path);
+          projectName = persisted.name;
+        }
+      }
       const currentId = createHash("sha256").update(projectRoot).digest("hex").slice(0, 16);
       if (!value.projects.some((project) => project.id === currentId)) {
         const detected = await detectProjectSignals(projectRoot);
@@ -248,22 +255,83 @@ async function startChat(): Promise<{ mode: string; status: string; projectName:
   await chatStart;
   return { mode: "real", status: "ready", projectName, projectRoot };
 }
-async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean }> {
+type ProjectPdacNode = { id?: string; type?: string; title?: string; status?: string; path?: string };
+type ProjectPdacEdge = { from?: string; to?: string; kind?: string };
+type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string };
+
+async function readProjectPdacTruth(): Promise<ProjectPdacTruth | null> {
+  const graphPath = join(projectRoot, ".product", "generated", "product-graph.json");
+  try {
+    const graph = JSON.parse(await readFile(graphPath, "utf8")) as { nodes?: ProjectPdacNode[]; edges?: ProjectPdacEdge[] };
+    const nodes = Array.isArray(graph.nodes) ? graph.nodes.filter((node) => typeof node.title === "string") : [];
+    if (nodes.length === 0) return null;
+    const grouped = new Map<string, ProjectPdacNode[]>();
+    for (const node of nodes) {
+      const type = node.type ?? "artifact";
+      grouped.set(type, [...(grouped.get(type) ?? []), node]);
+    }
+    const typeLabels: Record<string, string> = {
+      actor: "Actor",
+      "use-case": "Caso de uso",
+      journey: "Journey",
+      "domain-term": "Término de dominio",
+      "business-rule": "Regla de negocio",
+      requirement: "Requisito",
+      constraint: "Restricción",
+      "bounded-context": "Bounded context",
+      behaviour: "Comportamiento",
+    };
+    const report = [
+      "# Estado PDAC actual",
+      `Fuente de verdad: ${graphPath}`,
+      `Nodos confirmados: ${nodes.length}. Relaciones confirmadas: ${Array.isArray(graph.edges) ? graph.edges.length : 0}.`,
+      ...[...grouped.entries()].flatMap(([type, entries]) => entries.map((node) => `- ${typeLabels[type] ?? type}: ${node.title} · estado ${node.status ?? "sin estado"} · evidencia ${node.path ?? "sin ruta"}`)),
+    ].join("\n");
+    const graphNodes = nodes.filter((node): node is ProjectPdacNode & { id: string; title: string } => typeof node.id === "string" && typeof node.title === "string");
+    const graphNodeIds = new Map(graphNodes.map((node, index) => [node.id, `N${index}`]));
+    const graphMermaid = [
+      "flowchart LR",
+      ...graphNodes.map((node, index) => `N${index}["${`${typeLabels[node.type ?? "artifact"] ?? node.type ?? "Artefacto"} · ${node.title}`.replace(/["[\]`]/g, "")}"]`),
+      ...(Array.isArray(graph.edges) ? graph.edges.flatMap((edge) => {
+        const from = edge.from ? graphNodeIds.get(edge.from) : undefined;
+        const to = edge.to ? graphNodeIds.get(edge.to) : undefined;
+        return from && to ? [`${from} -->|${(edge.kind ?? "relación").replace(/["[\]`]/g, "")}| ${to}`] : [];
+      }) : []),
+    ].join("\n");
+    let mermaid: string | null = graphMermaid === "flowchart LR" ? null : graphMermaid;
+    if (!mermaid) {
+      try {
+        mermaid = (await readFile(join(projectRoot, ".product", "generated", "product-graph.mmd"), "utf8")).trim() || null;
+      } catch {
+        // The JSON graph remains sufficient to restore the PDAC inventory.
+      }
+    }
+    const updatedAt = (await stat(graphPath)).mtime.toISOString();
+    return { report, mermaid, updatedAt };
+  } catch {
+    return null;
+  }
+}
+async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }> {
   const signature = await projectContentSignature();
+  const projectPdac = await readProjectPdacTruth();
+  if (projectPdac) {
+    return { projectName, mermaid: projectPdac.mermaid, report: projectPdac.report, updatedAt: projectPdac.updatedAt, stale: false, source: "project-pdac" };
+  }
   try {
     const saved = JSON.parse(await readFile(projectAnalysisPath(), "utf8")) as StoredProjectAnalysis;
-    return { projectName: saved.projectName, mermaid: saved.mermaid, report: saved.report, updatedAt: saved.updatedAt, stale: saved.sourceSignature !== signature };
+    return { projectName: saved.projectName, mermaid: saved.mermaid, report: saved.report, updatedAt: saved.updatedAt, stale: saved.sourceSignature !== signature, source: "stored-analysis" };
   } catch {
     // Fall back to the captured Notes artifact until the project has its own persisted state.
   }
-  if (projectName !== "notes") return { projectName, mermaid: null, report: null, stale: false };
+  if (projectName !== "notes") return { projectName, mermaid: null, report: null, stale: false, source: "none" };
   try {
     const evidenceDirectory = join(workspaceRoot, "docs", "implementation", "evidence");
     const mermaid = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-cli.mermaid"), "utf8");
     const report = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-real.md"), "utf8");
-    return { projectName, mermaid: mermaid.trim() || null, report: report.trim() || null, stale: false };
+    return { projectName, mermaid: mermaid.trim() || null, report: report.trim() || null, stale: false, source: "stored-analysis" };
   } catch {
-    return { projectName, mermaid: null, report: null, stale: false };
+    return { projectName, mermaid: null, report: null, stale: false, source: "none" };
   }
 }
 type StoredProjectAnalysis = { projectName: string; mermaid: string | null; report: string | null; updatedAt: string; sourceSignature: string };
@@ -274,7 +342,7 @@ function projectAnalysisPath(): string {
   return join(directory, `${projectKey}.json`);
 }
 async function projectContentSignature(): Promise<string> {
-  const candidates = ["docs/product", "productshape", "docs/architecture", "architecture"];
+  const candidates = ["docs/product", "productshape", "docs/architecture", "architecture", ".product/generated/product-graph.json", ".product/generated/product-graph.mmd"];
   const entries: string[] = [];
   for (const candidate of candidates) {
     try {

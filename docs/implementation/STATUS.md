@@ -222,12 +222,18 @@ Bloqueos y límites:
 | F06-T06 | done | `ADR-026-greenfield-pdac-interview-and-proactive-review.md` documenta modo, entrevista, personalidad, superficies dinámica/estática y revisión temporal |
 | F06-T07 | done | `pnpm test:e2e:greenfield` pasó con OMP real, fixture limpia, entrevista y reapertura; evidencia `F06-T03-greenfield-interview.png/.md` |
 | F06-T08 | pending | Revisión manual de scroll, legibilidad del mapa y confirmación de que las preguntas PDAC no exponen prompts internos |
-| F06-T09 | done | Estado PDAC por proyecto en `.tmp/project-analysis/`, recuperación al reabrir y detección de cambios en ProductShape/arquitectura por firma |
+| F06-T09 | done | El grafo `.product/generated/product-graph.json` del proyecto es la fuente de verdad al reabrir; `.tmp/project-analysis/` queda como fallback y se recalcula la firma de cambios |
 | F06-T10 | done | El chat formatea texto y remite al mapa central; no duplica el Mermaid completo |
 | F06-T11 | done | El foco actual ocupa la superficie principal; `Estado general` devuelve al resumen y Dominio muestra glosario debajo del grafo |
 | F06-T12 | done | La personalidad se separa en `PROJECT_ARCHITECT_PERSONA` y `PROJECT_ARCHITECT_CONDUCT`; incluye objetivo actual, foco único, hechos/inferencias y revisión proactiva |
 | F06-T13 | done | `docs/research/openclaw-personality.md` recoge fuentes first-party y justifica identidad separada, memoria trazable y proactividad como job |
 | F06-T14 | done | Cada artefacto PDAC tiene canvas tldraw editable y persistente por proyecto/entidad en IndexedDB; traducción/assets de UI locales; evidencia `F05-T06-notes-actors-tldraw.png` |
+| F06-T15 | done | `tests/e2e/greenfield-scenarios.ts` ejecuta tres ideas nuevas con OMP real, captura cada entrevista y elimina cada carpeta temporal y sus referencias |
+| F06-T16 | done | `tests/e2e/brownfield-projects.ts` revisa `pianolesson` y `pinto` con OMP real, navega sus artefactos y no modifica los repositorios |
+| F06-T17 | done | `tests/e2e/session-persistence.ts` cierra/reabre Electron y conserva `/Users/luis/projects/notes`, ProductShape y foco Actores; evidencia `F06-T18-session-before-close.png`/`after-reopen.png` |
+| F06-T18 | done | `tests/e2e/ux-scenarios.ts` ejecuta Brownfield Notes y Greenfield taller con OMP real; captura cada paso y verifica foco central, estado único, chat sin prompts internos y diagrama actualizado; evidencia en `docs/implementation/evidence/ux-scenarios/` |
+| F06-T19 | done | el mapa general y cada artefacto PDAC usan tldraw offline cuando hay hallazgos; cada lienzo se persiste por proyecto/entidad y se puede editar a mano |
+| F06-T20 | done | `tests/e2e/notes-pdac-lifecycle.ts` copia el PDAC de Notes a una fixture, verifica carga, añade un caso de uso, cierra/reabre, navega cuatro artefactos, elimina el grafo y verifica la recuperación sin tocar Notes |
 
 ### Verificación F06
 
@@ -236,13 +242,25 @@ Pasadas observadas:
 ```bash
 pnpm build:all
 pnpm lint
+pnpm typecheck
+pnpm typecheck:desktop
 pnpm test:e2e:notes:diagram
 pnpm test:e2e:greenfield
+pnpm exec tsx tests/e2e/greenfield-scenarios.ts
+pnpm test:e2e:brownfield:projects
+pnpm test:e2e:session
+pnpm test:e2e:ux
+pnpm test:e2e:notes:pdac-lifecycle
 ```
 
-`notes:diagram` pasó sin tokens: abre Notes, conserva el mapa general, navega a Casos de uso/Actores/Dominio, comprueba el glosario y monta un canvas tldraw offline por entidad. Guarda `F05-T06-notes-stored-diagram.png` y `F05-T06-notes-actors-tldraw.png`.
-`greenfield` pasó con OMP real: limpia la fixture, entrevista al usuario, guarda respuesta/captura y reabre el proyecto para recuperar el estado.
-La prueba brownfield `pnpm test:e2e:notes` pasó con OMP real: ProductShape y Arquitectura respondieron, la actividad central no duplica estado y el chat no expone el Mermaid completo. El escenario usa OMP real y consume la sesión configurada del usuario.
+`notes:diagram` pasó sin tokens: abre Notes y carga el grafo actual de `.product/generated/product-graph.json` (52 nodos y 145 relaciones en la ejecución), no el informe antiguo de `.tmp`; conserva el mapa, navega a Casos de uso/Actores/Dominio y monta canvas tldraw.
+`greenfield` pasó con OMP real: la fixture vacía inicia la entrevista, guarda respuesta/captura y reabre el proyecto.
+Los tres Greenfield adicionales pasaron con OMP real: biblioteca musical, reservas de taller e inventario de huerto. Cada respuesta separó confirmados, inferencias e incógnitas; las carpetas y referencias temporales se eliminaron.
+El Brownfield multi-proyecto ejecutó OMP real sobre `pianolesson` y `pinto`, llegó al resultado central, mantuvo el Mermaid fuera del chat y abrió las páginas de Actores, Casos de uso, Dominio y Journeys. Los repositorios no se modificaron.
+`pnpm test:e2e:session` pasó: tras cerrar Electron, el siguiente arranque sin `PROJECTSTUDIO_PROJECT_ROOT` recuperó `notes`, la pestaña `ProductShape` y el foco `Actores`. La selección del proyecto activo se conserva en el registro local y la fase/foco en `localStorage` por proyecto.
+La nueva superficie unifica el estado: el chat ya no duplica `.chat-activity`; el resultado OMP se muestra como mensaje streaming y el centro cambia a ProductShape antes de enviar cualquier workflow brownfield. El resumen ya no contiene la tarjeta `Asistente de ProductShape`; cuando hay hallazgos muestra el mapa general en un lienzo tldraw offline.
+`pnpm test:e2e:ux` pasó con OMP real sobre Notes y una Greenfield desechable; generó `docs/implementation/evidence/ux-scenarios/` con cuatro capturas y checks automáticos de foco central, estado único, chat sin prompts internos y diagrama actualizado.
+`pnpm test:e2e:notes:pdac-lifecycle` pasó: una copia efímera del PDAC de Notes recuperó el grafo, aceptó un nuevo caso de uso, lo mantuvo al reabrir, montó los cuatro lienzos y dejó de reportar recuperación al eliminar el grafo fuente. La fixture y sus referencias se eliminaron; Notes quedó intacto.
 La compilación de tldraw muestra avisos de bundle grande (2.0 MB minificado) y directivas `use client` ignoradas por Vite; no son errores de compilación. La build no licenciada intenta además cargar su watermark CDN, pero la CSP lo bloquea y no impide editar ni persistir el lienzo; eliminar esa petición requiere licencia/configuración de tldraw o sustituir esa parte de la UI.
 
 ### Checklist manual F06
@@ -252,10 +270,14 @@ La compilación de tldraw muestra avisos de bundle grande (2.0 MB minificado) y 
 - [ ] Confirmar que `Revisar` está arriba, que el centro muestra una sola línea de actividad y que el mapa ocupa más espacio.
 - [ ] Pulsar `Casos de uso`, `Actores`, `Dominio`, `Reglas` y `Bounded contexts`; confirmar filtros, `Profundizar con OMP` y el lienzo editable específico.
 - [ ] En un lienzo de Actores o Journeys, arrastrar un nodo, editar su texto y dibujar una relación; cerrar y reabrir para confirmar persistencia local.
-- [ ] Añadir `tests/fixtures/greenfield-empty/` como proyecto; confirmar `GREENFIELD · DISEÑO PDAC`, `ENTREVISTA` y la pregunta inicial.
+- [ ] Añadir `tests/fixtures/greenfield-empty/` como proyecto; confirmar `greenfield`, `Cuéntame el primer caso de uso` y el botón `Empezar`.
 - [ ] Escribir un caso de uso; confirmar que OMP pregunta una decisión cada vez y que el prompt interno no aparece.
 - [ ] Confirmar que no se ofrece comparar arquitecturas antes de tener PDAC.
 - [ ] En brownfield, dejar la ventana 15 minutos sin interacción después de un hallazgo; confirmar un único repaso breve y no una cascada de llamadas.
+- [ ] Contraer/expandir `EXPLORADOR`; confirmar que conserva iconos, tooltips y libera ancho central.
+- [ ] Ejecutar `pnpm test:e2e:ux`; revisar cada PNG: siguiente paso obvio, chat y centro en el mismo foco, diagrama actualizado y ningún prompt interno.
+- [ ] Con hallazgos visibles en Resumen, editar manualmente un nodo en el lienzo tldraw; cerrar/reabrir y confirmar que el cambio local sigue presente.
+- [ ] Cerrar y abrir la app sin `PROJECTSTUDIO_PROJECT_ROOT`; confirmar que vuelve al proyecto activo y al mismo foco PDAC.
 
 ## Fases anteriores
 
@@ -276,3 +298,17 @@ La compilación de tldraw muestra avisos de bundle grande (2.0 MB minificado) y 
 ## Próximo slice
 
 Fase 06: publicar artefactos visuales y modelos semánticos durables con scope y persistencia.
+
+## ProductShape canónico de ProjectStudio
+
+Se creó `docs/product/` como fuente documental del producto actual. Incluye propósito y frontera, actor, casos de uso de descubrimiento y reanudación, requisito de clasificación de evidencia, restricción local-first, journey brownfield y bounded context de Project Discovery.
+
+`docs/PRD.md` sigue siendo la especificación integral y enlaza explícitamente este modelo. La documentación marca la diferencia entre comportamiento aceptado, capacidades propuestas e incógnitas; no convierte la evidencia de Notes en evidencia de ProjectStudio.
+
+Verificación observada:
+
+- `pnpm build:all`: pass; Vite mantiene los avisos existentes de directivas `use client` y tamaño de bundle.
+- `pnpm lint`: pass.
+- `docs/product/` contiene 9 archivos y la detección de señales del proyecto ahora puede encontrar `docs/product`.
+
+El test unitario completo sigue con el fallo previo de `tests/agent-runtime.test.ts`: espera texto de personalidad antiguo y no está relacionado con este cambio documental.

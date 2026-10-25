@@ -22,7 +22,7 @@ const app = await electron.launch({
 try {
   const window = await app.firstWindow();
   await window.getByRole("button", { name: "Continuar análisis" }).waitFor();
-  const activity = await window.locator(".chat-activity").innerText();
+  const activity = await window.locator(".welcome-strip").innerText();
   if (!activity.includes("detuvo")) throw new Error(`unexpected discovery activity: ${activity}`);
   console.log(JSON.stringify({ interruptedDiscoveryIsResumable: true, activity }, null, 2));
 } finally {

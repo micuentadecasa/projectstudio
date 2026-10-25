@@ -20,11 +20,9 @@ const app = await electron.launch({
 });
 try {
   const window = await app.firstWindow();
-  await window.waitForFunction(() => document.querySelector<HTMLSelectElement>(".project-picker select option:checked")?.textContent?.includes("greenfield-empty"), undefined, { timeout: 30_000 });
+  await window.waitForFunction(() => document.body.innerText.includes("Este proyecto está vacío"), undefined, { timeout: 30_000 });
   await window.getByTitle("Producto y casos de uso").click();
-  await window.getByText("GREENFIELD · DISEÑO PDAC", { exact: true }).waitFor();
   await window.getByText("Cuéntame el primer caso de uso", { exact: true }).waitFor();
-  await window.getByText("ENTREVISTA", { exact: true }).waitFor();
   const initialOmpMessages = await window.locator(".message-row.omp").count();
   if (initialOmpMessages !== 1) throw new Error(`Greenfield should start with one guidance message, got ${initialOmpMessages}`);
 
@@ -32,7 +30,7 @@ try {
   await window.getByRole("button", { name: "Enviar mensaje" }).click();
   await window.locator(".pdac-activity-line").waitFor({ timeout: 30_000 });
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, initialOmpMessages, { timeout: 180_000 });
-  await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
+  await window.locator('[data-chat-status="settled"]').waitFor({ timeout: 180_000 });
   const response = await window.locator(".message-row.omp").last().innerText();
   if (!/actor|caso de uso|pregunta|resultado/i.test(response)) throw new Error(`Greenfield response did not start PDAC interview:\n${response}`);
   const screenshot = "docs/implementation/evidence/F06-T03-greenfield-interview.png";

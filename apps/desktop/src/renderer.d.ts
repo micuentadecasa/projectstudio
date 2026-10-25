@@ -35,7 +35,7 @@ declare global {
         archive: (id: string) => Promise<StudioProjectRegistry>;
       };
       project: {
-        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean }>;
+        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean; source: "project-pdac" | "stored-analysis" | "none" }>;
         saveAnalysis: (analysis: { report?: string | null; mermaid?: string | null }) => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt: string; sourceSignature: string }>;
         bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact" | "greenfield"; started: boolean; canResume?: boolean }>;
       };

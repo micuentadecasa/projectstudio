@@ -20,6 +20,7 @@ try {
   const window = await app.firstWindow();
   await window.waitForFunction(() => Array.from(document.querySelectorAll(".project-picker select option")).some((option) => option.textContent?.includes("notes")), undefined, { timeout: 30_000 });
   await window.getByTitle("Producto y casos de uso").click();
+  await window.getByText(/He cargado \d+ elementos del PDAC que vive en el proyecto/).waitFor({ timeout: 30_000 });
   await window.locator(".pdac-artifact-nav").waitFor();
   await window.locator(".pdac-details-card").waitFor();
   if (await window.locator(".welcome-strip").count() !== 0) throw new Error("ProductShape still shows the duplicated upper status");

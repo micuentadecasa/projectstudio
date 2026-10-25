@@ -19,10 +19,15 @@ try {
   const window = await app.firstWindow();
   const resizeDirections = await window.locator(".sidebar, .chat-panel").evaluateAll((elements) => elements.map((element) => getComputedStyle(element).resize));
   if (resizeDirections.some((direction) => direction !== "horizontal")) throw new Error(`panel resize contract failed: ${resizeDirections.join(",")}`);
-  await window.getByText("PROYECTOS", { exact: true }).waitFor();
+  await window.locator(".sidebar").waitFor({ timeout: 30_000 });
   await window.getByTitle("Añadir o crear referencia a un proyecto local").waitFor();
   if (!(await window.getByLabel("Mensaje para OMP").isVisible())) throw new Error("chat composer is not visible");
   await window.getByRole("button", { name: "Entender el proyecto" }).waitFor();
+  await window.getByRole("button", { name: "Contraer explorador" }).click();
+  if (!(await window.locator(".sidebar.collapsed").count())) throw new Error("sidebar did not collapse");
+  if (await window.getByText("PROYECTOS", { exact: true }).isVisible()) throw new Error("collapsed sidebar still shows project labels");
+  await window.getByRole("button", { name: "Expandir explorador" }).click();
+  if (await window.locator(".sidebar.collapsed").count()) throw new Error("sidebar did not expand");
 
   await window.getByRole("button", { name: "Cambiar tema" }).click();
   await window.screenshot({ path: resolve(evidenceDirectory, "F04-T01-desktop-chat-light.png"), fullPage: true });
@@ -34,12 +39,17 @@ try {
   try {
     await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, initialAssistantMessages, { timeout: 120_000 });
   } catch (error) {
-    throw new Error(`No final assistant message: ${JSON.stringify({ error: String(error), activity: await window.locator(".chat-activity").innerText(), chatError: await window.locator(".chat-error").innerText().catch(() => ""), messages: await window.locator(".message-row").allInnerTexts() })}`);
+    throw new Error(`No final assistant message: ${JSON.stringify({ error: String(error), chatStatus: await window.locator(".chat-panel").getAttribute("data-chat-status"), chatError: await window.locator(".chat-error").innerText().catch(() => ""), messages: await window.locator(".message-row").allInnerTexts() })}`);
   }
   const finalMessage = window.locator(".message-row.omp").last();
   const finalText = await finalMessage.innerText();
   if (finalText.includes("Eres el agente operativo") || finalText.includes("Flujo autorizado")) throw new Error(`Internal agent prompt leaked into chat: ${finalText}`);
-  await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 120_000 });
+  await window.waitForFunction(() => {
+    const chat = document.querySelector<HTMLElement>(".chat-messages");
+    return Boolean(chat && chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 2);
+  });
+  await window.locator(".pdac-artifact-nav").waitFor({ timeout: 30_000 });
+  if (await window.locator(".activity-card").count() !== 0) throw new Error("redundant ProductShape assistant card is still visible");
   await window.screenshot({ path: resolve(evidenceDirectory, "F04-T03-desktop-chat-real.png"), fullPage: true });
 
   const result = {

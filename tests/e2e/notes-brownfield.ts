@@ -35,7 +35,7 @@ try {
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, productShapeCount, { timeout: 180_000 });
   const productShapeMessage = window.locator(".message-row.omp").last();
   await productShapeMessage.waitFor({ timeout: 180_000 });
-  await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
+  await window.locator('[data-chat-status="settled"]').waitFor({ timeout: 180_000 });
   const productShapeResponse = await productShapeMessage.innerText();
   if ((await productShapeMessage.locator(".chat-diagram").count()) !== 0) throw new Error("ProductShape duplicated the full Mermaid diagram in chat");
   if ((await productShapeMessage.locator(".chat-diagram-link").count()) !== 1) throw new Error("ProductShape response did not explain that the diagram moved to the central map");
@@ -54,7 +54,7 @@ try {
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, architectureCount, { timeout: 180_000 });
   const architectureMessage = window.locator(".message-row.omp").last();
   await architectureMessage.waitFor({ timeout: 180_000 });
-  await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
+  await window.locator('[data-chat-status="settled"]').waitFor({ timeout: 180_000 });
   const architectureResponse = await architectureMessage.innerText();
   if ((await architectureMessage.locator(".chat-diagram").count()) !== 0 || (await architectureMessage.locator(".chat-diagram-link").count()) !== 1) throw new Error("Architecture response should keep Mermaid only in the central map");
   const architectureScreenshot = "docs/implementation/evidence/F05-T02-notes-architecture-real.png";

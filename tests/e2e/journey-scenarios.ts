@@ -52,10 +52,10 @@ try {
   app = await launch(root, { PROJECTSTUDIO_SKIP_BOOTSTRAP: "0" });
   page = await app.firstWindow();
   await page.getByRole("button", { name: "Entender el proyecto" }).waitFor();
-  await page.locator(".chat-activity").filter({ hasText: "Descubrimiento inicial en curso" }).waitFor();
+  await page.locator(".welcome-strip").filter({ hasText: "Descubrimiento inicial en curso" }).waitFor();
   if (!(await page.getByRole("button", { name: "Entender el proyecto" }).isEnabled())) throw new Error("objective disabled while discovery is active");
   await page.getByRole("button", { name: "Entender el proyecto" }).click();
-  await page.locator(".chat-activity").filter({ hasText: "Objetivo preparado" }).waitFor();
+  await page.locator(".welcome-strip").filter({ hasText: "Objetivo preparado" }).waitFor();
   console.log("scenario active-discovery-queues-objective: pass");
   await app.close();
   app = undefined;

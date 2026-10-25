@@ -259,8 +259,9 @@ async function startChat(): Promise<{ mode: string; status: string; projectName:
 }
 type ProjectPdacNode = { id?: string; type?: string; title?: string; status?: string; path?: string };
 type ProjectPdacEdge = { from?: string; to?: string; kind?: string };
-type ProjectPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string; steps?: string[] };
-type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string; artifacts: ProjectPdacArtifact[] };
+type ProjectPdacRelation = { from: string; to: string; kind: string };
+type ProjectPdacArtifact = { id: string; type: string; title: string; status?: string; path?: string; steps?: string[]; description?: string; nomenclature?: Record<string, string> };
+type ProjectPdacTruth = { report: string; mermaid: string | null; updatedAt: string; artifacts: ProjectPdacArtifact[]; relations: ProjectPdacRelation[] };
 type PdacCandidateInput = { type?: unknown; title?: unknown; detail?: unknown; evidence?: unknown; confidence?: unknown; primaryActor?: unknown; definedIn?: unknown };
 type PdacCandidate = { type: "actor" | "use-case" | "domain-term" | "journey" | "business-rule" | "requirement" | "constraint" | "bounded-context"; title: string; detail: string; evidence?: string; confidence?: string; primaryActor?: string; definedIn?: string };
 async function journeyStepTitles(node: ProjectPdacNode, graphNodes: Array<ProjectPdacNode & { id: string; title: string }>): Promise<string[]> {

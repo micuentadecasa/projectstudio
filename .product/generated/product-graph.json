@@ -1,0 +1,321 @@
+{
+  "schema": "product-definition-as-code/graph/v1alpha1",
+  "nodes": [
+    {
+      "id": "canvas-rules-finding-0-objetivo-actual",
+      "type": "business-rule",
+      "title": "Objetivo actual",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-1-hechos-observados",
+      "type": "business-rule",
+      "title": "Hechos observados",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-2-producto-documentado",
+      "type": "business-rule",
+      "title": "Producto documentado",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-3-docs-product-contiene-9-documentos-y-se-declara-",
+      "type": "business-rule",
+      "title": "`docs/product/` contiene 9 documentos y se declara c",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-4-el-alcance-actual-incluye",
+      "type": "business-rule",
+      "title": "El alcance actual incluye:",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-5-registrar-y-cambiar-proyectos-locales",
+      "type": "business-rule",
+      "title": "registrar y cambiar proyectos locales;",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-6-detectar-se-ales-de-productshape-y-arquitectura",
+      "type": "business-rule",
+      "title": "detectar señales de ProductShape y arquitectura;",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-rules-finding-7-iniciar-descubrimiento",
+      "type": "business-rule",
+      "title": "iniciar descubrimiento;",
+      "status": "draft",
+      "path": "docs/product/model/rules/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-decidir-qu--evidencia-pdac-puede",
+      "type": "actor",
+      "title": "Objetivo actual: decidir qué evidencia PDAC puede tr",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-1-hecho-docs-product-readme-md-3-13-presenta-docs-",
+      "type": "actor",
+      "title": "Hecho: `docs/product/README.md:3-13` presenta `docs/",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-2-inferencia-al-reabrir-el-proyecto-un-borrador-ed",
+      "type": "actor",
+      "title": "Inferencia: al reabrir el proyecto, un borrador edit",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-3-hecho-product-generated-product-graph-json-conti",
+      "type": "actor",
+      "title": "Hecho: `.product/generated/product-graph.json` conti",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-4-inc-gnita-falta-decidir-el-identificador-durable",
+      "type": "actor",
+      "title": "Incógnita: falta decidir el identificador durable de",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-5-hecho-el-yaml-marca-f07-como-waiting-user-approv",
+      "type": "actor",
+      "title": "Hecho: el YAML marca F07 como `WAITING_USER_APPROVAL",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-6-inferencia-no-queda-claro-si-la-siguiente-decisi",
+      "type": "actor",
+      "title": "Inferencia: no queda claro si la siguiente decisión",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-7-pregunta--nica-confirmamos-que-docs-product-sigu",
+      "type": "actor",
+      "title": "Pregunta única: ¿Confirmamos que `docs/product/` sig",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-determinar-si-el-descubrimiento-",
+      "type": "actor",
+      "title": "Objetivo actual: determinar si el descubrimiento bro",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-1-inc-gnita-qu--identidad-y-procedencia-tendr--cad",
+      "type": "actor",
+      "title": "Incógnita: qué identidad y procedencia tendrá cada h",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-2-pregunta--nica-confirmamos-que-docs-product-es-e",
+      "type": "actor",
+      "title": "Pregunta única: ¿confirmamos que `docs/product/` es",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-fijar-qu--artefacto-pdac-puede-g",
+      "type": "actor",
+      "title": "Objetivo actual: fijar qué artefacto PDAC puede gobe",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-1-inferencia-no-es-seguro-tratar-el-grafo-como-bas",
+      "type": "actor",
+      "title": "Inferencia: no es seguro tratar el grafo como baseli",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-2-inc-gnita-si-corresponde-cerrar-la-revisi-n-manu",
+      "type": "actor",
+      "title": "Incógnita: si corresponde cerrar la revisión manual",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-3-pregunta--nica-confirmamos-que-docs-product-es-e",
+      "type": "actor",
+      "title": "Pregunta única: ¿confirmamos que `docs/product/` es",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-detectar-si-el-foco-de-actores-t",
+      "type": "actor",
+      "title": "Objetivo actual: detectar si el foco de actores tien",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-el-l-mite-de-responsabili",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar el límite de responsabilidad",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-delimitar-actores-humanos-sistem",
+      "type": "actor",
+      "title": "Objetivo actual: delimitar actores humanos, sistemas",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-1-hallazgos-verificables",
+      "type": "actor",
+      "title": "Hallazgos verificables",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-4-siguiente-decisi-n--til-se-mantiene-un--nico-act",
+      "type": "actor",
+      "title": "Siguiente decisión útil: ¿se mantiene un único actor",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-la-pol-tica-de-responsabi",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar la política de responsabilid",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-la-decisi-n-pendiente-del",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar la decisión pendiente del fo",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-resolver-el--nico-bloqueo-pendie",
+      "type": "actor",
+      "title": "Objetivo actual: resolver el único bloqueo pendiente",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-la-pol-tica-de-publicaci-",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar la política de publicación d",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-la-excepci-n-de-escritura",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar la excepción de escritura de",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-comprobar-si-el-foco-actores-tie",
+      "type": "actor",
+      "title": "Objetivo actual: comprobar si el foco actores tiene",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-evitar-repetir-el-informe-mientr",
+      "type": "actor",
+      "title": "Objetivo actual: evitar repetir el informe mientras",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-identificar-s-lo-cambios-nuevos-",
+      "type": "actor",
+      "title": "Objetivo actual: identificar sólo cambios nuevos en",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-la--nica-inc-gnita-pendie",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar la única incógnita pendiente",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-delimitar-actores-humanos-y-sist",
+      "type": "actor",
+      "title": "Objetivo actual: delimitar actores humanos y sistema",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-1-hallazgos",
+      "type": "actor",
+      "title": "Hallazgos",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-evitar-repetir-la-revisi-n-mient",
+      "type": "actor",
+      "title": "Objetivo actual: evitar repetir la revisión mientras",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-el-bloqueo-del-foco-actor",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar el bloqueo del foco actores",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-detectar-cambios-nuevos-en-el-fo",
+      "type": "actor",
+      "title": "Objetivo actual: detectar cambios nuevos en el foco",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-1-observaciones",
+      "type": "actor",
+      "title": "Observaciones:",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-revisar-si-el-modelo-de-actores-",
+      "type": "actor",
+      "title": "Objetivo actual: revisar si el modelo de actores tie",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    },
+    {
+      "id": "canvas-actors-finding-0-objetivo-actual-cerrar-la-decisi-n-abierta-del-f",
+      "type": "actor",
+      "title": "Objetivo actual: cerrar la decisión abierta del foco",
+      "status": "draft",
+      "path": "docs/product/model/actors/canvas.md"
+    }
+  ],
+  "edges": []
+}

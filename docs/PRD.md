@@ -8,6 +8,8 @@
 **Plataforma objetivo inicial:** macOS (Electron); diseño portable a Windows/Linux  
 **Idioma de la interfaz inicial:** español; arquitectura preparada para internacionalización  
 **Documento destinado a:** Oh My Pi (OMP) como agente que **construye ProjectStudio** y como motor integrado que **opera dentro de ProjectStudio**, desarrolladores y pruebas de aceptación.
+> **Modelo de producto canónico:** [`docs/product/README.md`](product/README.md) contiene el ProductShape navegable y la evidencia del comportamiento actual. Este PRD mantiene la especificación integral y el plan de capacidades; si difieren, el modelo documentado debe distinguir explícitamente lo aceptado, lo propuesto y lo desconocido.
+
 
 > **Regla principal:** **LangGraph.js orquesta el flujo y sus checkpoints; Oh My Pi (`can1357/oh-my-pi`) es el agente de programación utilizado para desarrollar ProjectStudio y el motor conversacional/coding agent incorporado dentro de la aplicación.** ProjectStudio controla proyectos, vistas, artefactos canónicos, permisos y cambios; OMP puede investigar, planificar, proponer, editar código dentro de un worktree autorizado y ejecutar verificaciones permitidas. Toda modificación visible o persistente pasa por comandos tipados y políticas del host; ninguna se deduce de HTML/texto libre del LLM.
 

@@ -1,17 +1,16 @@
 ✦
 OMP
-Objetivo actual: definir el caso de uso principal de una app que permita a un músico registrar una canción y practicarla sin conexión.
+Objetivo actual: delimitar el primer caso de uso del proyecto.
 
 Confirmado
-• Actor principal: músico.
-• Necesidad: registrar una canción.
-• Resultado buscado: poder practicarla sin conexión.
-• Flujo: greenfield; aún no hay arquitectura ni decisiones técnicas que asumir.
+• Actor principal: un músico.
+• Necesidad: registrar una canción y practicarla sin conexión.
+• El modo offline es un requisito explícito.
 
 Incógnitas
-• Qué significa exactamente “registrar”: ¿grabar audio, importar un archivo, introducir título y datos, guardar letra/acordes, o una combinación?
-• Qué debe poder hacer el músico durante la práctica.
-• Excepciones, reglas y alcance fuera del producto.
+• Qué evento inicia el flujo.
+• Si el registro también debe funcionar sin conexión o sólo la práctica.
+• Qué significa “practicar” en el producto.
 
 Siguiente pregunta:  
-Cuando dices “registrar una canción”, ¿qué debe poder hacer concretamente el músico: grabarla desde el dispositivo, importar un audio existente, introducir información escrita —letra/acordes—, o varias de estas opciones?
+¿Qué dispara el flujo principal: el músico quiere registrar una canción nueva, o abre una canción ya registrada para practicarla?

@@ -5,7 +5,9 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../..");
 const notesRoot = process.env.PROJECTSTUDIO_NOTES_ROOT ?? "/Users/luis/projects/notes";
 const testProjectRoot = resolve(root, ".tmp/e2e-notes-empty");
+const testRegistryPath = resolve(root, ".tmp/e2e-notes-empty-registry.json");
 await rm(testProjectRoot, { recursive: true, force: true });
+await rm(testRegistryPath, { force: true });
 await cp(notesRoot, testProjectRoot, { recursive: true });
 await rm(resolve(testProjectRoot, "docs/product"), { recursive: true, force: true });
 await rm(resolve(testProjectRoot, ".product"), { recursive: true, force: true });
@@ -19,7 +21,7 @@ const environment = Object.fromEntries(
 const app = await electron.launch({
   args: [main],
   cwd: root,
-  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_PROJECT_ROOT: testProjectRoot, PROJECTSTUDIO_AUTONOMOUS_RECOVERY: "1", PROJECTSTUDIO_SKIP_BOOTSTRAP: "1" },
+  env: { ...environment, ELECTRON_IS_DEV: "0", PROJECTSTUDIO_PROJECT_ROOT: testProjectRoot, PROJECTSTUDIO_PROJECT_REGISTRY: testRegistryPath, PROJECTSTUDIO_AUTONOMOUS_RECOVERY: "1", PROJECTSTUDIO_SKIP_BOOTSTRAP: "1" },
 });
 try {
   const window = await app.firstWindow();
@@ -87,4 +89,5 @@ try {
 } finally {
   await app.close();
   await rm(testProjectRoot, { recursive: true, force: true });
+  await rm(testRegistryPath, { force: true });
 }

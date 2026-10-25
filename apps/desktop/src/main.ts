@@ -113,13 +113,15 @@ let agentRuntime: AgentRuntime | undefined;
 let chatStart: Promise<void> | undefined;
 let bootstrapInFlight = false;
 let registryInitialized = false;
+type ProjectMode = "brownfield" | "greenfield";
 type ProjectRecord = {
   id: string;
   name: string;
   path: string;
+  mode: ProjectMode;
   archived: boolean;
   lastOpenedAt: string;
-  detected: { productShape: boolean; architecture: boolean };
+  detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
 type ProjectRegistry = { version: 1; activeId: string; projects: ProjectRecord[] };
 
@@ -139,10 +141,15 @@ async function detectProjectSignals(path: string): Promise<ProjectRecord["detect
     }
   };
   const rootEntries = await readdir(path).catch(() => []);
+  const visibleEntries = rootEntries.filter((entry) => !entry.startsWith(".") && entry !== "node_modules");
   return {
     productShape: (await exists("docs/product")) || (await exists("productshape")) || rootEntries.some((entry) => entry.toLowerCase().includes("productshape")),
     architecture: (await exists("docs/architecture")) || (await exists("architecture")) || (await exists("docs/adr")) || rootEntries.some((entry) => entry.toLowerCase().includes("architecture")),
+    empty: visibleEntries.length === 0,
   };
+}
+function projectMode(detected: ProjectRecord["detected"]): ProjectMode {
+  return detected.empty ? "greenfield" : "brownfield";
 }
 
 async function readProjectRegistry(): Promise<ProjectRegistry> {
@@ -151,7 +158,8 @@ async function readProjectRegistry(): Promise<ProjectRegistry> {
     if (value.version === 1 && Array.isArray(value.projects)) {
       const currentId = createHash("sha256").update(projectRoot).digest("hex").slice(0, 16);
       if (!value.projects.some((project) => project.id === currentId)) {
-        value.projects.push({ id: currentId, name: projectName, path: projectRoot, archived: false, lastOpenedAt: new Date().toISOString(), detected: await detectProjectSignals(projectRoot) });
+        const detected = await detectProjectSignals(projectRoot);
+        value.projects.push({ id: currentId, name: projectName, path: projectRoot, mode: projectMode(detected), archived: false, lastOpenedAt: new Date().toISOString(), detected });
       }
       if (!registryInitialized) value.activeId = currentId;
       registryInitialized = true;
@@ -164,7 +172,7 @@ async function readProjectRegistry(): Promise<ProjectRegistry> {
   return {
     version: 1,
     activeId: createHash("sha256").update(projectRoot).digest("hex").slice(0, 16),
-    projects: [{ id: createHash("sha256").update(projectRoot).digest("hex").slice(0, 16), name: projectName, path: projectRoot, archived: false, lastOpenedAt: new Date().toISOString(), detected }],
+    projects: [{ id: createHash("sha256").update(projectRoot).digest("hex").slice(0, 16), name: projectName, path: projectRoot, mode: projectMode(detected), archived: false, lastOpenedAt: new Date().toISOString(), detected }],
   };
 }
 
@@ -174,7 +182,10 @@ async function writeProjectRegistry(registry: ProjectRegistry): Promise<void> {
 
 async function listProjects(): Promise<ProjectRegistry> {
   const registry = await readProjectRegistry();
-  for (const project of registry.projects) project.detected = await detectProjectSignals(project.path);
+  for (const project of registry.projects) {
+    project.detected = await detectProjectSignals(project.path);
+    project.mode = projectMode(project.detected);
+  }
   await writeProjectRegistry(registry);
   return registry;
 }
@@ -185,11 +196,12 @@ async function activateProject(path: string): Promise<ProjectRegistry> {
   const registry = await readProjectRegistry();
   const id = createHash("sha256").update(resolvedPath).digest("hex").slice(0, 16);
   const existing = registry.projects.find((project) => project.id === id);
-  const record = existing ?? { id, name: basename(resolvedPath), path: resolvedPath, archived: false, lastOpenedAt: new Date().toISOString(), detected: await detectProjectSignals(resolvedPath) };
+  const detected = await detectProjectSignals(resolvedPath);
+  const record = existing ?? { id, name: basename(resolvedPath), path: resolvedPath, mode: projectMode(detected), archived: false, lastOpenedAt: new Date().toISOString(), detected };
   record.archived = false;
   record.lastOpenedAt = new Date().toISOString();
-  record.detected = await detectProjectSignals(resolvedPath);
-  if (!existing) registry.projects.push(record);
+  record.detected = detected;
+  record.mode = projectMode(detected);
   registry.activeId = id;
   await writeProjectRegistry(registry);
   agentRuntime?.stop();
@@ -236,19 +248,66 @@ async function startChat(): Promise<{ mode: string; status: string; projectName:
   await chatStart;
   return { mode: "real", status: "ready", projectName, projectRoot };
 }
-async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null }> {
-  if (projectName !== "notes") return { projectName, mermaid: null, report: null };
+async function loadStoredAnalysis(): Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean }> {
+  const signature = await projectContentSignature();
+  try {
+    const saved = JSON.parse(await readFile(projectAnalysisPath(), "utf8")) as StoredProjectAnalysis;
+    return { projectName: saved.projectName, mermaid: saved.mermaid, report: saved.report, updatedAt: saved.updatedAt, stale: saved.sourceSignature !== signature };
+  } catch {
+    // Fall back to the captured Notes artifact until the project has its own persisted state.
+  }
+  if (projectName !== "notes") return { projectName, mermaid: null, report: null, stale: false };
   try {
     const evidenceDirectory = join(workspaceRoot, "docs", "implementation", "evidence");
     const mermaid = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-cli.mermaid"), "utf8");
     const report = await readFile(join(evidenceDirectory, "F05-T01-notes-productshape-real.md"), "utf8");
-    return { projectName, mermaid: mermaid.trim() || null, report: report.trim() || null };
+    return { projectName, mermaid: mermaid.trim() || null, report: report.trim() || null, stale: false };
   } catch {
-    return { projectName, mermaid: null, report: null };
+    return { projectName, mermaid: null, report: null, stale: false };
   }
 }
-type DiscoveryStatus = "running" | "completed" | "failed";
-type DiscoveryMarker = { projectRoot: string; status: DiscoveryStatus; updatedAt: string };
+type StoredProjectAnalysis = { projectName: string; mermaid: string | null; report: string | null; updatedAt: string; sourceSignature: string };
+function projectAnalysisPath(): string {
+  const projectKey = createHash("sha256").update(projectRoot).digest("hex").slice(0, 16);
+  const directory = join(workspaceRoot, ".tmp", "project-analysis");
+  mkdirSync(directory, { recursive: true });
+  return join(directory, `${projectKey}.json`);
+}
+async function projectContentSignature(): Promise<string> {
+  const candidates = ["docs/product", "productshape", "docs/architecture", "architecture"];
+  const entries: string[] = [];
+  for (const candidate of candidates) {
+    try {
+      const details = await stat(join(projectRoot, candidate));
+      entries.push(`${candidate}:${details.mtimeMs}:${details.size}`);
+    } catch {
+      entries.push(`${candidate}:missing`);
+    }
+  }
+  return createHash("sha256").update(entries.join("|")).digest("hex");
+}
+async function saveStoredAnalysis(input: { report?: string | null; mermaid?: string | null }): Promise<StoredProjectAnalysis> {
+  const signature = await projectContentSignature();
+  let previous: StoredProjectAnalysis | null = null;
+  try {
+    previous = JSON.parse(await readFile(projectAnalysisPath(), "utf8")) as StoredProjectAnalysis;
+  } catch {
+    // First persisted result for this project.
+  }
+  const report = input.report?.trim() || null;
+  const mergedReport = report && previous?.report ? `${previous.report}\n\n---\n\n${report}` : report ?? previous?.report ?? null;
+  const saved: StoredProjectAnalysis = {
+    projectName,
+    mermaid: input.mermaid?.trim() || previous?.mermaid || null,
+    report: mergedReport,
+    updatedAt: new Date().toISOString(),
+    sourceSignature: signature,
+  };
+  await writeFile(projectAnalysisPath(), `${JSON.stringify(saved, null, 2)}\n`, "utf8");
+  return saved;
+}
+type DiscoveryStatus = "running" | "completed" | "failed" | "greenfield";
+type DiscoveryMarker = { projectRoot: string; status: Exclude<DiscoveryStatus, "greenfield">; updatedAt: string };
 
 function discoveryMarkerPath(): string {
   const projectKey = createHash("sha256").update(projectRoot).digest("hex").slice(0, 16);
@@ -265,13 +324,15 @@ async function readDiscoveryMarker(): Promise<DiscoveryMarker | null> {
   }
 }
 
-async function writeDiscoveryMarker(status: DiscoveryStatus): Promise<void> {
+async function writeDiscoveryMarker(status: Exclude<DiscoveryStatus, "greenfield">): Promise<void> {
   const marker: DiscoveryMarker = { projectRoot, status, updatedAt: new Date().toISOString() };
   await writeFile(discoveryMarkerPath(), `${JSON.stringify(marker)}\n`, "utf8");
 }
 
 async function bootstrapDiscovery(resume: boolean): Promise<{ status: DiscoveryStatus | "stored-artifact"; started: boolean; canResume?: boolean }> {
   if (process.env.PROJECTSTUDIO_SKIP_BOOTSTRAP === "1") return { status: "completed", started: false };
+  const detected = await detectProjectSignals(projectRoot);
+  if (detected.empty) return { status: "greenfield", started: false };
   const stored = await loadStoredAnalysis();
   if (stored.mermaid) return { status: "stored-artifact", started: false };
   const previous = await readDiscoveryMarker();
@@ -335,6 +396,14 @@ function installChatIpc(): void {
     return archiveProject(id);
   });
   ipcMain.handle("studio:project:analysis", () => loadStoredAnalysis());
+  ipcMain.handle("studio:project:analysis:save", async (_event, value: unknown) => {
+    if (typeof value !== "object" || value === null) throw new Error("analysis must be an object");
+    const input = value as { report?: unknown; mermaid?: unknown };
+    return saveStoredAnalysis({
+      report: typeof input.report === "string" ? input.report : null,
+      mermaid: typeof input.mermaid === "string" ? input.mermaid : null,
+    });
+  });
   ipcMain.handle("studio:project:bootstrap", async (_event, options: unknown) => {
     const resume = typeof options === "object" && options !== null && "resume" in options && options.resume === true;
     return bootstrapDiscovery(resume);
@@ -356,8 +425,19 @@ function installChatIpc(): void {
     ) throw new Error("command workflow and non-empty prompt are required");
     await startChat();
     const runtime = await getAgentRuntime();
+    const detected = await detectProjectSignals(projectRoot);
+    const prompt = detected.empty
+      ? [
+        "GREENFIELD PDAC: actúa como facilitador de diseño de producto para un proyecto nuevo y vacío.",
+        "No inspecciones código inexistente ni inventes arquitectura. Entrevista al usuario para construir un borrador PDAC.",
+        "Pregunta de una en una; prioriza objetivo del caso de uso, actor principal, disparador, resultado esperado, excepciones, reglas y qué queda fuera.",
+        "Después de cada respuesta, resume lo confirmado, separa incógnitas y formula sólo la siguiente pregunta más útil.",
+        "Cuando haya suficiente claridad, propone un borrador PDAC con actores, casos de uso, reglas, dominios/bounded contexts y un Mermaid de producto. Pide confirmación antes de tratarlo como aceptado.",
+        `Aporte del usuario: ${value.prompt.trim()}`,
+      ].join("\n")
+      : value.prompt.trim();
     const state = await runtime.start(
-      { workflow: value.workflow, prompt: value.prompt.trim() },
+      { workflow: value.workflow, prompt },
       { projectId: projectName, threadId: `${projectName}/thread-main`, runId: randomUUID(), requestId: randomUUID() },
     );
     return { accepted: state.status !== "failed", requestId: state.ompRequestId ?? "" };

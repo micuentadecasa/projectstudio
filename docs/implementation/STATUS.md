@@ -3,13 +3,13 @@
 ## Estado actual
 
 ```yaml
-phase: '05'
+phase: '06'
 state: WAITING_USER_APPROVAL
 baselineCommit: 18d4333
 branch: main
-gate: F05-BROWNFIELD-WORKBENCH
+gate: F06-PDAC-ARTIFACT-CANVASES
 userDecision: APPROVED
-nextPhase: '05'
+nextPhase: '06'
 latestVerifiedCommit: 892a97d
 manualVerification: required
 ```
@@ -209,6 +209,53 @@ Bloqueos y límites:
 - [ ] Abrir `ProductShape` y confirmar que aparece el diagrama guardado en el canvas.
 - [ ] Pulsar `Revisar y diagramar` arriba a la derecha; confirmar que el prompt se envía automáticamente.
 - [ ] Confirmar que el chat termina en `settled` y que el usuario sólo ve progreso resumido y el resultado.
+
+## Fase 06 — Greenfield, entidades PDAC y jerarquía visual
+
+| ID | Estado | Output verificable |
+|---|---|---|
+| F06-T01 | done | `docs/implementation/JOURNEY-GREENFIELD.md` define el journey brownfield/greenfield y el escenario reproducible |
+| F06-T02 | done | `apps/desktop/src/main.ts` detecta carpetas vacías y persiste `mode: greenfield` sin modificar el repositorio |
+| F06-T03 | done | `tests/e2e/greenfield.ts` y `tests/fixtures/greenfield-empty/` cubren la entrevista inicial con OMP real; captura/texto se generan al ejecutar |
+| F06-T04 | done | ProductShape usa barra de iconos con contador para Propósito, Actores, Casos de uso, Dominio, Journeys, Reglas, Requisitos y Bounded contexts |
+| F06-T05 | done | ProductShape elimina el hero duplicado, conserva una sola línea de actividad, spinner sticky y reserva más área central al mapa |
+| F06-T06 | done | `ADR-026-greenfield-pdac-interview-and-proactive-review.md` documenta modo, entrevista, personalidad, superficies dinámica/estática y revisión temporal |
+| F06-T07 | done | `pnpm test:e2e:greenfield` pasó con OMP real, fixture limpia, entrevista y reapertura; evidencia `F06-T03-greenfield-interview.png/.md` |
+| F06-T08 | pending | Revisión manual de scroll, legibilidad del mapa y confirmación de que las preguntas PDAC no exponen prompts internos |
+| F06-T09 | done | Estado PDAC por proyecto en `.tmp/project-analysis/`, recuperación al reabrir y detección de cambios en ProductShape/arquitectura por firma |
+| F06-T10 | done | El chat formatea texto y remite al mapa central; no duplica el Mermaid completo |
+| F06-T11 | done | El foco actual ocupa la superficie principal; `Estado general` devuelve al resumen y Dominio muestra glosario debajo del grafo |
+| F06-T12 | done | La personalidad se separa en `PROJECT_ARCHITECT_PERSONA` y `PROJECT_ARCHITECT_CONDUCT`; incluye objetivo actual, foco único, hechos/inferencias y revisión proactiva |
+| F06-T13 | done | `docs/research/openclaw-personality.md` recoge fuentes first-party y justifica identidad separada, memoria trazable y proactividad como job |
+| F06-T14 | done | Cada artefacto PDAC tiene canvas tldraw offline editable, persistente por proyecto/entidad en IndexedDB; evidencia `F05-T06-notes-actors-tldraw.png` |
+
+### Verificación F06
+
+Pasadas observadas:
+
+```bash
+pnpm build:all
+pnpm lint
+pnpm test:e2e:notes:diagram
+pnpm test:e2e:greenfield
+```
+
+`notes:diagram` pasó sin tokens: abre Notes, conserva el mapa general, navega a Casos de uso/Actores/Dominio, comprueba el glosario y monta un canvas tldraw offline por entidad. Guarda `F05-T06-notes-stored-diagram.png` y `F05-T06-notes-actors-tldraw.png`.
+`greenfield` pasó con OMP real: limpia la fixture, entrevista al usuario, guarda respuesta/captura y reabre el proyecto para recuperar el estado.
+La prueba brownfield `pnpm test:e2e:notes` pasó con OMP real: ProductShape y Arquitectura respondieron, la actividad central no duplica estado y el chat no expone el Mermaid completo. El escenario usa OMP real y consume la sesión configurada del usuario.
+La compilación de tldraw muestra avisos de bundle grande (2.0 MB minificado) y directivas `use client` ignoradas por Vite; no son errores de compilación. Debe vigilarse el tamaño en el siguiente corte.
+
+### Checklist manual F06
+
+- [ ] Abrir `PROJECTSTUDIO_PROJECT_ROOT=/Users/luis/projects/notes pnpm desktop` y entrar en ProductShape.
+- [ ] Confirmar que ya no aparece un hero superior repetido; la navegación PDAC queda en una barra de iconos con contadores.
+- [ ] Confirmar que `Revisar` está arriba, que el centro muestra una sola línea de actividad y que el mapa ocupa más espacio.
+- [ ] Pulsar `Casos de uso`, `Actores`, `Dominio`, `Reglas` y `Bounded contexts`; confirmar filtros, `Profundizar con OMP` y el lienzo editable específico.
+- [ ] En un lienzo de Actores o Journeys, arrastrar un nodo, editar su texto y dibujar una relación; cerrar y reabrir para confirmar persistencia local.
+- [ ] Añadir `tests/fixtures/greenfield-empty/` como proyecto; confirmar `GREENFIELD · DISEÑO PDAC`, `ENTREVISTA` y la pregunta inicial.
+- [ ] Escribir un caso de uso; confirmar que OMP pregunta una decisión cada vez y que el prompt interno no aparece.
+- [ ] Confirmar que no se ofrece comparar arquitecturas antes de tener PDAC.
+- [ ] En brownfield, dejar la ventana 15 minutos sin interacción después de un hallazgo; confirmar un único repaso breve y no una cascada de llamadas.
 
 ## Fases anteriores
 

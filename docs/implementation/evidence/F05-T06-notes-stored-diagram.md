@@ -1,37 +1,29 @@
 Learner
-Learner
-Local operator
-Operator
-FastAPI app + browserviewer
-App
-Local worker
-Worker
-SQLite: Songs, Parts,Revisions, Jobs
+L
+FastAPI local app
+APP
+(SQLite)
 DB
-Local source and artifactfiles
-Files
-Import runner
-Runner
-Local / YouTube-NASacquisition
-Acquisition
-Transcription Adapter
-Adapter
-Optional score-image OMR
-OMR
-Practice Score JSONcanonical representation
-Canonical
-Local practice library
-Library
-MuScriptor
-MuScriptor
-Interactive NotationPlayer
-Player
-Deterministic practiceanalysis
-Teacher
+Import Job / Bundle
+JOB
+Local worker /import_runner
+W
+Local library
+LIB
+MuScriptor adapter
+M
+Optional OMR runtime
+O
+Practice Score JSON
+SCORE
+MusicXML / playback /diagnostics / provenance
+ART
+Interactive notationplayer
+PLAYER
+Deterministic practiceteacher
+TEACH
 Pedagogical plan
-Plan
-Optional assistant /voice rephrasing
-Rephrase
-Pending action
-Pending
+PLAN
+Pending action + learnerconfirmation
+CONF
 Mapa de relaciones · generado por OMP con evidencia del proyecto

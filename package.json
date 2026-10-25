@@ -16,10 +16,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e:notes": "pnpm build:all && tsx tests/e2e/notes-brownfield.ts",
+    "test:e2e:greenfield": "pnpm build:all && tsx tests/e2e/greenfield.ts",
     "test:e2e:journey": "pnpm build:all && tsx tests/e2e/brownfield-journey.ts",
     "test:e2e:journey:scenarios": "pnpm build:all && tsx tests/e2e/journey-scenarios.ts",
     "test:e2e:notes:diagram": "pnpm build:all && tsx tests/e2e/notes-diagram.ts",
-    "test:f02": "vitest run tests/studio-graph.test.ts",
     "test:f03": "vitest run tests/omp-rpc.test.ts tests/omp-adapter.test.ts",
     "test:f04": "pnpm build:all && tsx tests/e2e/desktop-smoke.ts",
     "spike:notes:productshape": "tsx scripts/run-notes-productshape.ts",
@@ -34,6 +34,7 @@
     "electron": "45.0.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "tldraw": "^5.5.2",
     "zod": "4.6.7"
   },
   "devDependencies": {

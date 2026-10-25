@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("studio", {
   },
   project: {
     analysis: () => ipcRenderer.invoke("studio:project:analysis"),
+    saveAnalysis: (analysis) => ipcRenderer.invoke("studio:project:analysis:save", analysis),
     bootstrap: (options) => ipcRenderer.invoke("studio:project:bootstrap", options),
   },
   command: {

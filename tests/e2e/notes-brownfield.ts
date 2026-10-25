@@ -23,19 +23,22 @@ try {
   if (!selectedProject.startsWith("notes")) throw new Error(`unexpected project label: ${selectedProject}`);
 
   await window.getByTitle("Producto y casos de uso").click();
-  await window.getByRole("heading", { name: "ProductShape" }).waitFor();
+  await window.locator(".pdac-artifact-nav").waitFor();
   const productShapeCount = await window.locator(".message-row.omp").count();
-  await window.getByRole("button", { name: "Revisar y diagramar" }).click();
-  await window.locator(".pdac-progress-panel").waitFor({ timeout: 30_000 });
-  if (await window.locator(".pdac-progress-panel").count() !== 1 || await window.locator(".pdac-live-progress").count() !== 0) throw new Error("ProductShape exposes duplicate central activity status");
-  if ((await window.locator(".pdac-progress-step").count()) === 0) throw new Error("ProductShape activity timeline did not publish a step");
+  await window.getByRole("button", { name: "Revisar", exact: true }).click();
+  if (await window.locator(".message-row.user").filter({ hasText: "PRODUCTSHAPE:" }).count() !== 0) throw new Error("ProductShape internal action prompt leaked into chat");
+  await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count || document.querySelector(".pdac-activity-line") !== null, productShapeCount, { timeout: 30_000 });
+  if (await window.locator(".pdac-activity-line").count() > 0) {
+    if (await window.locator(".pdac-activity-line").count() !== 1 || await window.locator(".pdac-live-progress").count() !== 0) throw new Error("ProductShape exposes duplicate central activity status");
+    if ((await window.locator(".pdac-activity-history span").count()) === 0) throw new Error("ProductShape activity timeline did not publish a step");
+  }
   await window.waitForFunction((count) => document.querySelectorAll(".message-row.omp").length > count, productShapeCount, { timeout: 180_000 });
   const productShapeMessage = window.locator(".message-row.omp").last();
   await productShapeMessage.waitFor({ timeout: 180_000 });
   await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
   const productShapeResponse = await productShapeMessage.innerText();
-  if ((await productShapeMessage.locator(".chat-diagram").count()) === 0) throw new Error(`ProductShape response did not contain a Mermaid diagram:\n${productShapeResponse}`);
-  if ((await window.locator(".generated-system-map .diagram-canvas").count()) === 0) throw new Error("ProductShape diagram was not published to the canvas");
+  if ((await productShapeMessage.locator(".chat-diagram").count()) !== 0) throw new Error("ProductShape duplicated the full Mermaid diagram in chat");
+  if ((await productShapeMessage.locator(".chat-diagram-link").count()) !== 1) throw new Error("ProductShape response did not explain that the diagram moved to the central map");
   const productShapeScreenshot = "docs/implementation/evidence/F05-T01-notes-productshape-real.png";
   await window.locator(".chat-messages").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await window.screenshot({ path: resolve(root, productShapeScreenshot), fullPage: false });
@@ -53,7 +56,7 @@ try {
   await architectureMessage.waitFor({ timeout: 180_000 });
   await window.waitForFunction(() => document.querySelector(".chat-activity")?.textContent?.includes("Listo para continuar"), undefined, { timeout: 180_000 });
   const architectureResponse = await architectureMessage.innerText();
-  if ((await architectureMessage.locator(".chat-diagram").count()) === 0) throw new Error(`Architecture response did not contain a Mermaid diagram:\n${architectureResponse}`);
+  if ((await architectureMessage.locator(".chat-diagram").count()) !== 0 || (await architectureMessage.locator(".chat-diagram-link").count()) !== 1) throw new Error("Architecture response should keep Mermaid only in the central map");
   const architectureScreenshot = "docs/implementation/evidence/F05-T02-notes-architecture-real.png";
   await window.locator(".chat-messages").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await window.screenshot({ path: resolve(root, architectureScreenshot), fullPage: false });

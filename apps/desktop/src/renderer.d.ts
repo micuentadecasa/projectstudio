@@ -15,9 +15,10 @@ type StudioProject = {
   id: string;
   name: string;
   path: string;
+  mode: "brownfield" | "greenfield";
   archived: boolean;
   lastOpenedAt: string;
-  detected: { productShape: boolean; architecture: boolean };
+  detected: { productShape: boolean; architecture: boolean; empty: boolean };
 };
 type StudioProjectRegistry = { version: 1; activeId: string; projects: StudioProject[] };
 
@@ -34,8 +35,9 @@ declare global {
         archive: (id: string) => Promise<StudioProjectRegistry>;
       };
       project: {
-        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null }>;
-        bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact"; started: boolean; canResume?: boolean }>;
+        analysis: () => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt?: string; stale?: boolean }>;
+        saveAnalysis: (analysis: { report?: string | null; mermaid?: string | null }) => Promise<{ projectName: string; mermaid: string | null; report: string | null; updatedAt: string; sourceSignature: string }>;
+        bootstrap: (options: { resume?: boolean }) => Promise<{ status: "running" | "completed" | "failed" | "stored-artifact" | "greenfield"; started: boolean; canResume?: boolean }>;
       };
       command: {
         submit: (command: { workflow: "brownfield-discovery" | "architecture-documentation" | "architecture-planning"; prompt: string }) => Promise<{ accepted: boolean; requestId: string }>;
